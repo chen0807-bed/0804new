@@ -1553,6 +1553,13 @@
       calculate();
     }
 
+    function setPositionFromData(position) {
+      const code = String(position || "").toUpperCase();
+      if (!code) return;
+      const option = [...els.position.options].find(item => item.value === code);
+      if (option) els.position.value = code;
+    }
+
     function setWarCalcRole(role) {
       state.warCalcRole = role;
       els.warCalcHitterBtn.setAttribute("aria-pressed", String(role === "hitter"));
@@ -2042,6 +2049,7 @@
       if (row.level) els.level.value = normalizeLevel(row.level);
       if (row.type === "pitcher") {
         setRole("pitcher");
+        setPositionFromData(row.position);
         if (row.era !== undefined) els.era.value = row.era;
         if (row.fip !== undefined) els.fip.value = row.fip;
         if (row.ip !== undefined) els.ip.value = row.ip;
@@ -2050,6 +2058,7 @@
         if (row.hr9 !== undefined) els.hr9.value = row.hr9;
       } else {
         setRole("hitter");
+        setPositionFromData(row.position);
         if (row.hr !== undefined) els.hr.value = row.hr;
         if (row.ops !== undefined) els.ops.value = row.ops;
         if (row.obp !== undefined) els.obp.value = row.obp;
