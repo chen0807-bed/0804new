@@ -310,6 +310,64 @@
       gap: 14px;
     }
 
+    .account-board {
+      margin-top: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-controls,
+    .library-actions {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .library-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .saved-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .saved-list li {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 254, 251, .72);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .saved-list strong,
+    .saved-list span {
+      display: block;
+      min-width: 0;
+    }
+
+    .saved-list span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .saved-list button,
+    .library-actions button {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
     .data-controls {
       display: grid;
       grid-template-columns: repeat(6, minmax(120px, 1fr));
@@ -350,6 +408,40 @@
       min-height: 32px;
       padding: 5px 8px;
       font-size: 13px;
+    }
+
+    .role-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .role-pill.pitcher {
+      background: var(--clay);
+    }
+
+    .stat-stack {
+      display: grid;
+      gap: 3px;
+      min-width: 220px;
+    }
+
+    .stat-stack strong,
+    .stat-stack span {
+      display: block;
+    }
+
+    .stat-stack span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: normal;
     }
 
     .player-cell,
@@ -655,6 +747,9 @@
       .trade-matchup,
       .team-settings,
       .data-controls,
+      .auth-controls,
+      .library-actions,
+      .library-grid,
       .calculator-shell {
         grid-template-columns: 1fr;
       }
@@ -866,6 +961,43 @@
           </div>
         </div>
       </section>
+    </section>
+
+    <section class="panel account-board" aria-label="使用者資料庫">
+      <div class="section-head">
+        <h2>使用者資料庫</h2>
+        <span class="status-line" id="authStatus">尚未登入，登入後可儲存球員與交易包。</span>
+      </div>
+
+      <div class="auth-controls">
+        <label>
+          Email
+          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+        </label>
+        <button type="button" id="sendLoginLink">寄送登入連結</button>
+        <button type="button" id="signOutBtn">登出</button>
+      </div>
+
+      <div class="library-actions" aria-label="儲存資料操作">
+        <button type="button" id="savePlayerBtn">儲存目前球員評估</button>
+        <button type="button" id="saveTradeBtn">儲存目前雙方交易</button>
+        <button type="button" id="refreshLibraryBtn">重新整理資料庫</button>
+      </div>
+
+      <div class="library-grid">
+        <div>
+          <h3>已儲存球員</h3>
+          <ul class="saved-list" id="savedPlayersList">
+            <li><div><strong>尚未載入</strong><span>登入後會顯示你的球員紀錄。</span></div></li>
+          </ul>
+        </div>
+        <div>
+          <h3>已儲存交易</h3>
+          <ul class="saved-list" id="savedTradesList">
+            <li><div><strong>尚未載入</strong><span>登入後會顯示你的交易紀錄。</span></div></li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section class="panel war-calculator" aria-label="WAR 計算器">
@@ -1175,14 +1307,23 @@
       role: "hitter",
       warCalcRole: "hitter",
       dynamicRows: [],
+      supabaseSession: null,
+      supabaseUser: null,
+      savedPlayers: [],
+      savedTrades: [],
       currentPhotoUrl: "",
       currentPlayerId: "",
       currentDataSource: "",
+      dynamicLoadTimer: null,
       trade: {
         teamA: [],
         teamB: []
       }
     };
+
+    const SUPABASE_URL = "https://canjpuptlvivrkjabcbr.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_g2OyioH0WCZ0MOQ11TCwdQ_VpP8jaHx";
+    const SUPABASE_SESSION_KEY = "mlbTradeSupabaseSession";
 
     const positions = {
       hitter: [
@@ -1305,6 +1446,15 @@
       dataApiBase: document.getElementById("dataApiBase"),
       dataStatus: document.getElementById("dataStatus"),
       dataRows: document.getElementById("dataRows"),
+      authEmail: document.getElementById("authEmail"),
+      sendLoginLink: document.getElementById("sendLoginLink"),
+      signOutBtn: document.getElementById("signOutBtn"),
+      savePlayerBtn: document.getElementById("savePlayerBtn"),
+      saveTradeBtn: document.getElementById("saveTradeBtn"),
+      refreshLibraryBtn: document.getElementById("refreshLibraryBtn"),
+      authStatus: document.getElementById("authStatus"),
+      savedPlayersList: document.getElementById("savedPlayersList"),
+      savedTradesList: document.getElementById("savedTradesList"),
       selectedPlayerPhoto: document.getElementById("selectedPlayerPhoto"),
       selectedPlayerPhotoName: document.getElementById("selectedPlayerPhotoName"),
       selectedPlayerPhotoMeta: document.getElementById("selectedPlayerPhotoMeta"),
@@ -1754,6 +1904,22 @@
       return `/api/${source}?${params.toString()}`;
     }
 
+    function hasExternalApiBase() {
+      return Boolean(els.dataApiBase.value.trim());
+    }
+
+    function canUseSameOriginApi() {
+      return !location.protocol.startsWith("http") || !location.hostname.includes("github.io");
+    }
+
+    function scheduleDynamicLoad(delay = 450) {
+      clearTimeout(state.dynamicLoadTimer);
+      state.dynamicLoadTimer = setTimeout(() => {
+        if (hasExternalApiBase() || canUseSameOriginApi()) loadDynamicData();
+        else els.dataStatus.textContent = "GitHub Pages 需要先填入外部 API URL；填入後會自動載入資料。";
+      }, delay);
+    }
+
     function updateSelectedPhoto(row) {
       const photoUrl = row?.photoUrl || "";
       state.currentPhotoUrl = photoUrl;
@@ -1773,9 +1939,43 @@
       }
     }
 
+    function updateDataTableHeader() {
+      const header = document.querySelector(".data-table thead tr");
+      if (!header) return;
+      header.innerHTML = `
+        <th>球員</th>
+        <th>角色</th>
+        <th>來源</th>
+        <th>層級 / 球隊</th>
+        <th>年齡</th>
+        <th>主要數據</th>
+        <th>摘要</th>
+        <th>操作</th>
+      `;
+    }
+
+    function dataRoleLabel(row) {
+      return row?.type === "pitcher" ? "投手" : "打者";
+    }
+
+    function dataPrimaryStats(row) {
+      if (row?.type === "pitcher") {
+        return {
+          main: `IP ${row.ip || "-"} / ERA ${row.era || "-"} / FIP ${row.fip || "-"}`,
+          sub: `K/9 ${row.k9 || "-"} / BB/9 ${row.bb9 || "-"}`
+        };
+      }
+
+      return {
+        main: `HR ${row?.hr ?? "-"} / OPS ${row?.ops || "-"}`,
+        sub: `OBP ${row?.obp || "-"} / SLG ${row?.slg || "-"} / SB ${row?.sb ?? "-"}`
+      };
+    }
+
     function renderDataRows() {
       const term = els.dataSearch.value.trim().toLowerCase();
-      const rows = state.dynamicRows.filter(row => !term || row.name.toLowerCase().includes(term));
+      const shouldFilter = els.dataSource.value !== "tjstats";
+      const rows = state.dynamicRows.filter(row => !shouldFilter || !term || row.name.toLowerCase().includes(term));
       if (!rows.length) {
         els.dataRows.innerHTML = '<tr><td colspan="10">沒有符合的資料</td></tr>';
         return;
@@ -1783,16 +1983,17 @@
 
       els.dataRows.innerHTML = rows.slice(0, 80).map(row => {
         const originalIndex = state.dynamicRows.indexOf(row);
+        const stats = dataPrimaryStats(row);
+        const roleLabel = dataRoleLabel(row);
+        const roleClass = row.type === "pitcher" ? "pitcher" : "hitter";
         return `
         <tr>
           <td><div class="player-cell">${row.photoUrl ? `<img class="player-photo" src="${escapeHtml(row.photoUrl)}" alt="${escapeHtml(row.name)} 照片" loading="lazy">` : ""}<strong>${escapeHtml(row.name)}</strong></div></td>
+          <td><span class="role-pill ${roleClass}">${roleLabel}</span></td>
           <td>${escapeHtml(row.sourceLabel)}</td>
           <td>${escapeHtml(row.level || row.team || "")}</td>
           <td>${row.age ?? ""}</td>
-          <td>${row.hr ?? ""}</td>
-          <td>${row.ops ?? ""}</td>
-          <td>${row.era ?? ""}</td>
-          <td>${row.fip ?? ""}</td>
+          <td><div class="stat-stack"><strong>${escapeHtml(stats.main)}</strong><span>${escapeHtml(stats.sub)}</span></div></td>
           <td>${escapeHtml(row.summary || "")}</td>
           <td><button type="button" data-data-index="${originalIndex}">套用</button></td>
         </tr>
@@ -1942,6 +2143,350 @@
       renderTrade();
     }
 
+    function supabaseHeaders(authenticated = false, extra = {}) {
+      const headers = {
+        apikey: SUPABASE_KEY,
+        "Content-Type": "application/json",
+        ...extra
+      };
+      headers.Authorization = authenticated && state.supabaseSession?.access_token
+        ? `Bearer ${state.supabaseSession.access_token}`
+        : `Bearer ${SUPABASE_KEY}`;
+      return headers;
+    }
+
+    function setAuthStatus(message) {
+      els.authStatus.textContent = message;
+    }
+
+    function storeSession(session) {
+      state.supabaseSession = session;
+      if (session) localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(session));
+      else localStorage.removeItem(SUPABASE_SESSION_KEY);
+    }
+
+    function loadStoredSession() {
+      try {
+        const raw = localStorage.getItem(SUPABASE_SESSION_KEY);
+        if (!raw) return;
+        const session = JSON.parse(raw);
+        if (session?.expires_at && session.expires_at * 1000 < Date.now()) {
+          storeSession(null);
+          return;
+        }
+        storeSession(session);
+      } catch {
+        storeSession(null);
+      }
+    }
+
+    function handleAuthRedirect() {
+      if (!location.hash.includes("access_token=")) return;
+      const params = new URLSearchParams(location.hash.slice(1));
+      const accessToken = params.get("access_token");
+      if (!accessToken) return;
+      storeSession({
+        access_token: accessToken,
+        refresh_token: params.get("refresh_token") || "",
+        token_type: params.get("token_type") || "bearer",
+        expires_in: Number(params.get("expires_in")) || 3600,
+        expires_at: Math.floor(Date.now() / 1000) + (Number(params.get("expires_in")) || 3600)
+      });
+      history.replaceState(null, document.title, location.pathname + location.search);
+    }
+
+    async function fetchSupabaseUser() {
+      if (!state.supabaseSession?.access_token) {
+        state.supabaseUser = null;
+        renderLibrary();
+        return null;
+      }
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: supabaseHeaders(true)
+        });
+        if (!response.ok) throw new Error("登入已過期，請重新寄送登入連結。");
+        state.supabaseUser = await response.json();
+        setAuthStatus(`已登入：${state.supabaseUser.email || "Supabase 使用者"}`);
+        renderLibrary();
+        return state.supabaseUser;
+      } catch (error) {
+        state.supabaseUser = null;
+        storeSession(null);
+        setAuthStatus(error.message);
+        renderLibrary();
+        return null;
+      }
+    }
+
+    async function sendLoginLink() {
+      const email = els.authEmail.value.trim();
+      if (!email) {
+        setAuthStatus("請先輸入 Email。");
+        return;
+      }
+      els.sendLoginLink.disabled = true;
+      setAuthStatus("正在寄送登入連結...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
+          method: "POST",
+          headers: supabaseHeaders(false),
+          body: JSON.stringify({
+            email,
+            create_user: true,
+            options: { email_redirect_to: location.href.split("#")[0] }
+          })
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.msg || payload.error_description || "登入連結寄送失敗。");
+        }
+        setAuthStatus("登入連結已寄出，請到信箱點擊連結回到網站。");
+      } catch (error) {
+        setAuthStatus(`登入失敗：${error.message}`);
+      } finally {
+        els.sendLoginLink.disabled = false;
+      }
+    }
+
+    async function signOut() {
+      if (state.supabaseSession?.access_token) {
+        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+          method: "POST",
+          headers: supabaseHeaders(true)
+        }).catch(() => {});
+      }
+      state.supabaseUser = null;
+      storeSession(null);
+      state.savedPlayers = [];
+      state.savedTrades = [];
+      setAuthStatus("已登出。");
+      renderLibrary();
+    }
+
+    async function requireUser() {
+      if (state.supabaseUser?.id) return state.supabaseUser;
+      if (state.supabaseSession?.access_token) return await fetchSupabaseUser();
+      setAuthStatus("請先登入後再使用資料庫功能。");
+      return null;
+    }
+
+    function currentStatsSnapshot() {
+      return state.role === "hitter" ? {
+        hr: Number(els.hr.value) || 0,
+        obp: Number(els.obp.value) || 0,
+        slg: Number(els.slg.value) || 0,
+        ops: Number(els.ops.value) || 0,
+        wrcPlus: Number(els.wrcPlus.value) || 0,
+        sb: Number(els.sb.value) || 0
+      } : {
+        ip: Number(els.ip.value) || 0,
+        era: Number(els.era.value) || 0,
+        fip: Number(els.fip.value) || 0,
+        k9: Number(els.k9.value) || 0,
+        bb9: Number(els.bb9.value) || 0,
+        hr9: Number(els.hr9.value) || 0
+      };
+    }
+
+    function savedPlayerPayload() {
+      const valuation = buildValuation();
+      return {
+        user_id: state.supabaseUser.id,
+        player_name: valuation.name,
+        role: valuation.role,
+        level: valuation.levelKey,
+        position: valuation.positionId,
+        age: valuation.age,
+        salary: valuation.salary,
+        war: valuation.war,
+        score: valuation.score,
+        stats_json: {
+          ...currentStatsSnapshot(),
+          valuation,
+          playerId: valuation.playerId,
+          photoUrl: valuation.photoUrl,
+          dataSource: valuation.dataSource,
+          savedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    async function saveCurrentPlayer() {
+      const user = await requireUser();
+      if (!user) return;
+      els.savePlayerBtn.disabled = true;
+      setAuthStatus("正在儲存球員評估...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/saved_players`, {
+          method: "POST",
+          headers: supabaseHeaders(true, { Prefer: "return=representation" }),
+          body: JSON.stringify(savedPlayerPayload())
+        });
+        if (!response.ok) throw new Error(await response.text());
+        setAuthStatus("球員評估已儲存。");
+        await loadLibrary();
+      } catch (error) {
+        setAuthStatus(`儲存球員失敗：${error.message}`);
+      } finally {
+        els.savePlayerBtn.disabled = false;
+      }
+    }
+
+    async function saveCurrentTrade() {
+      const user = await requireUser();
+      if (!user) return;
+      const nameA = selectedTeamName(els.teamASelect, els.teamAName);
+      const nameB = selectedTeamName(els.teamBSelect, els.teamBName);
+      const cashA = Number(els.cashA.value) || 0;
+      const cashB = Number(els.cashB.value) || 0;
+      const totalA = Math.round(packageTotal("teamA") + cashValue(els.cashA));
+      const totalB = Math.round(packageTotal("teamB") + cashValue(els.cashB));
+      if (!state.trade.teamA.length && !state.trade.teamB.length) {
+        setAuthStatus("請先把球員加入雙方交易包，再儲存交易。");
+        return;
+      }
+
+      els.saveTradeBtn.disabled = true;
+      setAuthStatus("正在儲存交易包...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/saved_trades`, {
+          method: "POST",
+          headers: supabaseHeaders(true, { Prefer: "return=representation" }),
+          body: JSON.stringify({
+            user_id: user.id,
+            title: `${nameA} / ${nameB}`,
+            team_a_name: nameA,
+            team_b_name: nameB,
+            team_a_json: state.trade.teamA,
+            team_b_json: state.trade.teamB,
+            cash_a: cashA,
+            cash_b: cashB,
+            total_a: totalA,
+            total_b: totalB,
+            advice: els.tradeAdvice.textContent
+          })
+        });
+        if (!response.ok) throw new Error(await response.text());
+        setAuthStatus("交易包已儲存。");
+        await loadLibrary();
+      } catch (error) {
+        setAuthStatus(`儲存交易失敗：${error.message}`);
+      } finally {
+        els.saveTradeBtn.disabled = false;
+      }
+    }
+
+    async function loadLibrary() {
+      const user = await requireUser();
+      if (!user) return;
+      setAuthStatus("正在讀取資料庫...");
+      try {
+        const [playersResponse, tradesResponse] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/saved_players?select=*&order=created_at.desc&limit=20`, { headers: supabaseHeaders(true) }),
+          fetch(`${SUPABASE_URL}/rest/v1/saved_trades?select=*&order=created_at.desc&limit=20`, { headers: supabaseHeaders(true) })
+        ]);
+        if (!playersResponse.ok) throw new Error(await playersResponse.text());
+        if (!tradesResponse.ok) throw new Error(await tradesResponse.text());
+        state.savedPlayers = await playersResponse.json();
+        state.savedTrades = await tradesResponse.json();
+        setAuthStatus(`已登入：${state.supabaseUser.email || "Supabase 使用者"}，資料庫已同步。`);
+        renderLibrary();
+      } catch (error) {
+        setAuthStatus(`讀取資料庫失敗：${error.message}`);
+        renderLibrary();
+      }
+    }
+
+    async function deleteSavedRecord(table, id) {
+      const user = await requireUser();
+      if (!user || !id) return;
+      setAuthStatus("正在刪除紀錄...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: supabaseHeaders(true)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        setAuthStatus("紀錄已刪除。");
+        await loadLibrary();
+      } catch (error) {
+        setAuthStatus(`刪除失敗：${error.message}`);
+      }
+    }
+
+    function applySavedPlayer(record) {
+      const stats = record.stats_json || {};
+      const valuation = stats.valuation || {};
+      els.playerName.value = record.player_name || valuation.name || els.playerName.value;
+      els.age.value = record.age ?? valuation.age ?? els.age.value;
+      els.level.value = record.level || valuation.levelKey || els.level.value;
+      setRole(record.role || valuation.role || "hitter");
+      els.position.value = record.position || valuation.positionId || els.position.value;
+      els.salary.value = record.salary ?? valuation.salary ?? els.salary.value;
+      els.war.value = record.war ?? valuation.war ?? els.war.value;
+      els.controlYears.value = valuation.controlYears ?? els.controlYears.value;
+      if ((record.role || valuation.role) === "pitcher") {
+        ["ip", "era", "fip", "k9", "bb9", "hr9"].forEach(key => {
+          if (stats[key] !== undefined) els[key].value = stats[key];
+        });
+      } else {
+        ["hr", "obp", "slg", "ops", "wrcPlus", "sb"].forEach(key => {
+          if (stats[key] !== undefined) els[key].value = stats[key];
+        });
+      }
+      updateSelectedPhoto({
+        name: record.player_name || valuation.name,
+        photoUrl: stats.photoUrl || valuation.photoUrl,
+        playerId: stats.playerId || valuation.playerId,
+        sourceLabel: stats.dataSource || valuation.dataSource || "Supabase",
+        team: "Saved"
+      });
+      calculate();
+      setAuthStatus(`已套用 ${record.player_name || valuation.name || "球員"}。`);
+    }
+
+    function applySavedTrade(record) {
+      state.trade.teamA = Array.isArray(record.team_a_json) ? record.team_a_json : [];
+      state.trade.teamB = Array.isArray(record.team_b_json) ? record.team_b_json : [];
+      els.teamAName.value = record.team_a_name || els.teamAName.value;
+      els.teamBName.value = record.team_b_name || els.teamBName.value;
+      els.cashA.value = record.cash_a ?? 0;
+      els.cashB.value = record.cash_b ?? 0;
+      renderTrade();
+      setAuthStatus(`已套用 ${record.title || "交易包"}。`);
+    }
+
+    function renderLibrary() {
+      if (!state.supabaseUser) {
+        els.savedPlayersList.innerHTML = '<li><div><strong>尚未登入</strong><span>輸入 Email 並點擊登入連結後，就能儲存自己的球員資料。</span></div></li>';
+        els.savedTradesList.innerHTML = '<li><div><strong>尚未登入</strong><span>登入後可儲存雙方交易包，之後再載入比較。</span></div></li>';
+        return;
+      }
+
+      els.savedPlayersList.innerHTML = state.savedPlayers.length ? state.savedPlayers.map((record, index) => `
+        <li>
+          <div>
+            <strong>${escapeHtml(record.player_name || "未命名球員")} / ${Number(record.score ?? 0)} 分</strong>
+            <span>${escapeHtml(record.role || "")} / ${escapeHtml(record.level || "")} / ${escapeHtml(record.position || "")} / WAR ${Number(record.war ?? 0).toFixed(1)} / $${Number(record.salary ?? 0).toFixed(1)}M</span>
+          </div>
+          <button type="button" data-saved-player="${index}">套用</button>
+          <button type="button" data-delete-player="${escapeHtml(record.id)}">刪除</button>
+        </li>
+      `).join("") : '<li><div><strong>還沒有球員紀錄</strong><span>完成上方評估後按「儲存目前球員評估」。</span></div></li>';
+
+      els.savedTradesList.innerHTML = state.savedTrades.length ? state.savedTrades.map((record, index) => `
+        <li>
+          <div>
+            <strong>${escapeHtml(record.title || "未命名交易")} / 差距 ${Math.abs(Number(record.total_a || 0) - Number(record.total_b || 0))}</strong>
+            <span>${escapeHtml(record.team_a_name || "A")} ${Number(record.total_a || 0)} 分 vs ${escapeHtml(record.team_b_name || "B")} ${Number(record.total_b || 0)} 分</span>
+          </div>
+          <button type="button" data-saved-trade="${index}">套用</button>
+          <button type="button" data-delete-trade="${escapeHtml(record.id)}">刪除</button>
+        </li>
+      `).join("") : '<li><div><strong>還沒有交易紀錄</strong><span>把球員加入雙方交易包後按「儲存目前雙方交易」。</span></div></li>';
+    }
+
     els.hitterBtn.addEventListener("click", () => setRole("hitter"));
     els.pitcherBtn.addEventListener("click", () => setRole("pitcher"));
     els.warCalcHitterBtn.addEventListener("click", () => setWarCalcRole("hitter"));
@@ -1979,17 +2524,45 @@
     els.teamASelect.addEventListener("change", () => syncTeamName(els.teamASelect, els.teamAName));
     els.teamBSelect.addEventListener("change", () => syncTeamName(els.teamBSelect, els.teamBName));
     els.loadDataBtn.addEventListener("click", loadDynamicData);
-    els.dataSearch.addEventListener("input", renderDataRows);
+    els.dataSource.addEventListener("change", () => scheduleDynamicLoad(100));
+    els.dataTeam.addEventListener("change", () => scheduleDynamicLoad(100));
+    els.dataStartDate.addEventListener("change", () => scheduleDynamicLoad(100));
+    els.dataEndDate.addEventListener("change", () => scheduleDynamicLoad(100));
+    els.dataSearch.addEventListener("input", () => {
+      renderDataRows();
+      if (els.dataSource.value === "tjstats") scheduleDynamicLoad(650);
+    });
     els.dataApiBase.addEventListener("change", () => {
       const base = els.dataApiBase.value.trim();
       if (base) localStorage.setItem("mlbTradeApiBase", base.replace(/\/+$/, ""));
       else localStorage.removeItem("mlbTradeApiBase");
+      scheduleDynamicLoad(100);
     });
     els.dataRows.addEventListener("click", event => {
       const button = event.target.closest("button[data-data-index]");
       if (button) applyDataRow(state.dynamicRows[Number(button.dataset.dataIndex)]);
     });
+    els.sendLoginLink.addEventListener("click", sendLoginLink);
+    els.signOutBtn.addEventListener("click", signOut);
+    els.savePlayerBtn.addEventListener("click", saveCurrentPlayer);
+    els.saveTradeBtn.addEventListener("click", saveCurrentTrade);
+    els.refreshLibraryBtn.addEventListener("click", loadLibrary);
+    els.savedPlayersList.addEventListener("click", event => {
+      const applyButton = event.target.closest("button[data-saved-player]");
+      const deleteButton = event.target.closest("button[data-delete-player]");
+      if (applyButton) applySavedPlayer(state.savedPlayers[Number(applyButton.dataset.savedPlayer)]);
+      if (deleteButton) deleteSavedRecord("saved_players", deleteButton.dataset.deletePlayer);
+    });
+    els.savedTradesList.addEventListener("click", event => {
+      const applyButton = event.target.closest("button[data-saved-trade]");
+      const deleteButton = event.target.closest("button[data-delete-trade]");
+      if (applyButton) applySavedTrade(state.savedTrades[Number(applyButton.dataset.savedTrade)]);
+      if (deleteButton) deleteSavedRecord("saved_trades", deleteButton.dataset.deleteTrade);
+    });
 
+    handleAuthRedirect();
+    loadStoredSession();
+    updateDataTableHeader();
     populateTeams();
     populateDataTeams();
     els.dataApiBase.value = localStorage.getItem("mlbTradeApiBase") || "";
@@ -1998,6 +2571,11 @@
     calculateWar();
     calculate();
     renderTrade();
+    renderLibrary();
+    scheduleDynamicLoad(250);
+    if (state.supabaseSession) fetchSupabaseUser().then(user => {
+      if (user) loadLibrary();
+    });
   </script>
 </body>
 </html>
