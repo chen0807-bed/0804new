@@ -319,7 +319,7 @@
     .auth-controls,
     .library-actions {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) auto auto;
+      grid-template-columns: minmax(180px, 1fr) minmax(160px, 240px) auto auto auto;
       gap: 10px;
       align-items: end;
     }
@@ -974,7 +974,12 @@
           Email
           <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
         </label>
-        <button type="button" id="sendLoginLink">寄送登入連結</button>
+        <label>
+          密碼
+          <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="至少 6 個字">
+        </label>
+        <button type="button" id="signInBtn">登入</button>
+        <button type="button" id="signUpBtn">註冊</button>
         <button type="button" id="signOutBtn">登出</button>
       </div>
 
@@ -1448,7 +1453,9 @@
       dataStatus: document.getElementById("dataStatus"),
       dataRows: document.getElementById("dataRows"),
       authEmail: document.getElementById("authEmail"),
-      sendLoginLink: document.getElementById("sendLoginLink"),
+      authPassword: document.getElementById("authPassword"),
+      signInBtn: document.getElementById("signInBtn"),
+      signUpBtn: document.getElementById("signUpBtn"),
       signOutBtn: document.getElementById("signOutBtn"),
       savePlayerBtn: document.getElementById("savePlayerBtn"),
       saveTradeBtn: document.getElementById("saveTradeBtn"),
@@ -2265,6 +2272,95 @@
       }
     }
 
+    function authCredentials() {
+      const email = els.authEmail.value.trim();
+      const password = els.authPassword.value;
+      if (!email) {
+        setAuthStatus("請先輸入 Email。");
+        return null;
+      }
+      if (!password || password.length < 6) {
+        setAuthStatus("密碼至少需要 6 個字。");
+        return null;
+      }
+      return { email, password };
+    }
+
+    function normalizeAuthSession(payload) {
+      if (!payload?.access_token) return null;
+      return {
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token || "",
+        token_type: payload.token_type || "bearer",
+        expires_in: Number(payload.expires_in) || 3600,
+        expires_at: Math.floor(Date.now() / 1000) + (Number(payload.expires_in) || 3600)
+      };
+    }
+
+    async function signInWithPassword() {
+      const credentials = authCredentials();
+      if (!credentials) return;
+      els.signInBtn.disabled = true;
+      setAuthStatus("正在登入...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: "POST",
+          headers: supabaseHeaders(false),
+          body: JSON.stringify(credentials)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.msg || payload.error_description || payload.error || "登入失敗。");
+        }
+        const session = normalizeAuthSession(payload);
+        if (!session) throw new Error("登入回應沒有 access token。");
+        storeSession(session);
+        state.supabaseUser = payload.user || null;
+        setAuthStatus(`已登入：${state.supabaseUser?.email || credentials.email}`);
+        await fetchSupabaseUser();
+        await loadLibrary();
+      } catch (error) {
+        setAuthStatus(`登入失敗：${error.message}`);
+      } finally {
+        els.signInBtn.disabled = false;
+      }
+    }
+
+    async function signUpWithPassword() {
+      const credentials = authCredentials();
+      if (!credentials) return;
+      els.signUpBtn.disabled = true;
+      setAuthStatus("正在註冊...");
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+          method: "POST",
+          headers: supabaseHeaders(false),
+          body: JSON.stringify({
+            ...credentials,
+            options: { email_redirect_to: authRedirectUrl() }
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload.msg || payload.error_description || payload.error || "註冊失敗。");
+        }
+        const session = normalizeAuthSession(payload);
+        if (session) {
+          storeSession(session);
+          state.supabaseUser = payload.user || null;
+          setAuthStatus(`註冊並登入成功：${state.supabaseUser?.email || credentials.email}`);
+          await fetchSupabaseUser();
+          await loadLibrary();
+        } else {
+          setAuthStatus("註冊成功。若 Supabase 有開啟 Email 確認，請先到信箱確認後再用密碼登入。");
+        }
+      } catch (error) {
+        setAuthStatus(`註冊失敗：${error.message}`);
+      } finally {
+        els.signUpBtn.disabled = false;
+      }
+    }
+
     async function signOut() {
       if (state.supabaseSession?.access_token) {
         await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
@@ -2558,7 +2654,8 @@
       const button = event.target.closest("button[data-data-index]");
       if (button) applyDataRow(state.dynamicRows[Number(button.dataset.dataIndex)]);
     });
-    els.sendLoginLink.addEventListener("click", sendLoginLink);
+    els.signInBtn.addEventListener("click", signInWithPassword);
+    els.signUpBtn.addEventListener("click", signUpWithPassword);
     els.signOutBtn.addEventListener("click", signOut);
     els.savePlayerBtn.addEventListener("click", saveCurrentPlayer);
     els.saveTradeBtn.addEventListener("click", saveCurrentTrade);
