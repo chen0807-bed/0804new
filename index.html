@@ -1324,6 +1324,7 @@
     const SUPABASE_URL = "https://canjpuptlvivrkjabcbr.supabase.co";
     const SUPABASE_KEY = "sb_publishable_g2OyioH0WCZ0MOQ11TCwdQ_VpP8jaHx";
     const SUPABASE_SESSION_KEY = "mlbTradeSupabaseSession";
+    const PUBLIC_SITE_URL = "https://chen0807-bed.github.io/0804new/";
 
     const positions = {
       hitter: [
@@ -2168,6 +2169,12 @@
       els.authStatus.textContent = message;
     }
 
+    function authRedirectUrl() {
+      const isLocalHost = ["localhost", "127.0.0.1", ""].includes(location.hostname);
+      if (isLocalHost || location.protocol === "file:") return PUBLIC_SITE_URL;
+      return location.href.split("#")[0];
+    }
+
     function storeSession(session) {
       state.supabaseSession = session;
       if (session) localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(session));
@@ -2243,7 +2250,7 @@
           body: JSON.stringify({
             email,
             create_user: true,
-            options: { email_redirect_to: location.href.split("#")[0] }
+            options: { email_redirect_to: authRedirectUrl() }
           })
         });
         if (!response.ok) {
