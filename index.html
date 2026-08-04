@@ -1,0 +1,2003 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MLB 球員交易價值評估器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f3ec;
+      --ink: #17202a;
+      --muted: #667085;
+      --line: #d8d2c4;
+      --panel: #fffdf7;
+      --field: #1f7a55;
+      --clay: #bf6f44;
+      --blue: #244b76;
+      --gold: #c99b36;
+      --good: #247a4f;
+      --warn: #a85f16;
+      --bad: #a43d3d;
+      --shadow: 0 18px 45px rgba(28, 34, 42, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(201, 155, 54, .18), transparent 28rem),
+        linear-gradient(135deg, #f8f5ef 0%, #eef3f0 47%, #f6efe8 100%);
+      color: var(--ink);
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    header {
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 5vw, 54px);
+      letter-spacing: 0;
+      line-height: 1.05;
+    }
+
+    .lede {
+      margin: 0;
+      color: var(--muted);
+      max-width: 720px;
+    }
+
+    .season-badge {
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 247, .78);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .panel,
+    .result-panel {
+      background: rgba(255, 253, 247, .92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field-full { grid-column: 1 / -1; }
+
+    label {
+      display: grid;
+      gap: 7px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    select,
+    input {
+      width: 100%;
+      border: 1px solid #c9c2b3;
+      background: #fffefb;
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 9px 11px;
+      font: inherit;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus {
+      outline: 3px solid rgba(36, 75, 118, .22);
+      outline-offset: 2px;
+    }
+
+    .role-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid #bdb5a6;
+      background: #fffefb;
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button[aria-pressed="true"] {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .hint {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .trade-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .trade-actions button:first-child {
+      background: var(--field);
+      border-color: var(--field);
+      color: #fff;
+    }
+
+    .trade-actions button:last-child {
+      background: var(--clay);
+      border-color: var(--clay);
+      color: #fff;
+    }
+
+    .result-panel {
+      overflow: hidden;
+    }
+
+    .score-strip {
+      display: grid;
+      grid-template-columns: minmax(170px, 240px) minmax(0, 1fr);
+      gap: 0;
+      min-height: 258px;
+    }
+
+    .score-card {
+      padding: 24px;
+      color: #fff;
+      background:
+        linear-gradient(140deg, rgba(23, 32, 42, .08), transparent),
+        var(--score-color, var(--blue));
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+    }
+
+    .score-label {
+      margin: 0;
+      font-weight: 700;
+      opacity: .9;
+    }
+
+    .score-number {
+      font-size: clamp(56px, 10vw, 96px);
+      font-weight: 800;
+      line-height: .9;
+      letter-spacing: 0;
+    }
+
+    .tier {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .detail {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .verdict {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .breakdown {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      border-top: 3px solid var(--line);
+      padding-top: 10px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .value-bar {
+      height: 18px;
+      border-radius: 999px;
+      background: #e6dfd3;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .value-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--clay), var(--gold), var(--good));
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    .diamond-wrap {
+      padding: 18px 18px 22px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: minmax(180px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .position-note {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .position-note strong {
+      color: var(--ink);
+    }
+
+    .scenario-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .trade-board {
+      margin-top: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .data-board {
+      margin-top: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .data-controls {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .data-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 254, 251, .65);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .data-table th {
+      color: var(--muted);
+      font-weight: 800;
+      background: rgba(255, 253, 247, .8);
+    }
+
+    .data-table button {
+      min-height: 32px;
+      padding: 5px 8px;
+      font-size: 13px;
+    }
+
+    .player-cell,
+    .selected-player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .player-photo,
+    .selected-photo,
+    .trade-photo {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      background: #eef1f3;
+      flex: 0 0 auto;
+    }
+
+    .selected-player {
+      grid-column: 1 / -1;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 254, 251, .72);
+    }
+
+    .selected-photo {
+      width: 58px;
+      height: 58px;
+    }
+
+    .selected-player strong,
+    .selected-player span {
+      display: block;
+    }
+
+    .selected-player span {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .status-line {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .war-calculator {
+      margin-top: 18px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .calculator-shell {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(240px, 360px);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .calc-result {
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      padding: 18px;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+    }
+
+    .calc-result strong {
+      font-size: clamp(44px, 8vw, 76px);
+      line-height: .9;
+    }
+
+    .calc-result span,
+    .calc-result p {
+      margin: 0;
+      line-height: 1.5;
+      opacity: .92;
+    }
+
+    .calc-breakdown {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .calc-breakdown div {
+      border-top: 1px solid rgba(255, 255, 255, .45);
+      padding-top: 8px;
+    }
+
+    .calc-breakdown strong,
+    .calc-breakdown span {
+      display: block;
+    }
+
+    .calc-breakdown strong {
+      font-size: 18px;
+    }
+
+    .calc-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .trade-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .trade-head h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .trade-matchup {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 220px) minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .team-settings {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .trade-side {
+      border: 1px solid var(--line);
+      background: rgba(255, 254, 251, .65);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      min-width: 0;
+    }
+
+    .side-title {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .side-title label {
+      font-size: 13px;
+    }
+
+    .side-total {
+      font-size: 26px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .side-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+
+    .side-summary div {
+      min-width: 0;
+    }
+
+    .side-summary strong,
+    .side-summary span {
+      display: block;
+    }
+
+    .side-summary strong {
+      font-size: 18px;
+    }
+
+    .side-summary span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .package-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .package-list li {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px;
+      border-top: 1px solid var(--line);
+    }
+
+    .player-line {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px 10px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .player-line strong,
+    .player-line span {
+      display: block;
+      grid-column: 2;
+      overflow-wrap: anywhere;
+    }
+
+    .player-line:not(:has(.trade-photo)) strong,
+    .player-line:not(:has(.trade-photo)) span {
+      grid-column: 1 / -1;
+    }
+
+    .trade-photo {
+      grid-row: 1 / span 3;
+    }
+
+    .player-line span {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .remove-btn {
+      min-height: 34px;
+      padding: 6px 9px;
+      font-size: 13px;
+    }
+
+    .trade-center {
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      padding: 16px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .trade-center strong {
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .trade-center span {
+      opacity: .9;
+      line-height: 1.45;
+    }
+
+    .trade-advice {
+      margin: 0;
+      opacity: .95;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .cash-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 860px) {
+      main { width: min(100% - 22px, 720px); padding: 18px 0; }
+      header,
+      .app-shell,
+      .score-strip,
+      .diamond-wrap,
+      .trade-matchup,
+      .team-settings,
+      .data-controls,
+      .calculator-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .season-badge { justify-self: start; }
+    }
+
+    @media (max-width: 560px) {
+      .field-grid,
+      .breakdown,
+      .role-toggle,
+      .trade-actions,
+      .cash-row,
+      .trade-head,
+      .section-head,
+      .calc-actions,
+      .calc-breakdown,
+      .side-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .panel,
+      .detail,
+      .score-card {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>MLB 球員交易價值評估器</h1>
+        <p class="lede">選擇層級與守備位置，輸入當季成績和薪資，快速估算球員在交易市場上的相對價值。</p>
+      </div>
+      <div class="season-badge">2026 估值模型</div>
+    </header>
+
+    <section class="app-shell" aria-label="交易價值輸入與結果">
+      <form class="panel" id="valuationForm">
+          <div class="field-grid">
+            <div class="field-full">
+              <span class="hint">球員類型</span>
+              <div class="role-toggle" role="group" aria-label="球員類型">
+                <button type="button" id="hitterBtn" aria-pressed="true">打者</button>
+                <button type="button" id="pitcherBtn" aria-pressed="false">投手</button>
+              </div>
+            </div>
+
+            <label>
+              球員名稱
+              <input id="playerName" type="text" value="Player A" autocomplete="off">
+            </label>
+
+            <div class="selected-player">
+              <img class="selected-photo" id="selectedPlayerPhoto" alt="球員照片" hidden>
+              <div>
+                <strong id="selectedPlayerPhotoName">尚未套用資料庫照片</strong>
+                <span id="selectedPlayerPhotoMeta">從動態資料庫套用球員後會顯示官方照片</span>
+              </div>
+            </div>
+
+            <label>
+              年齡
+              <input id="age" type="number" min="16" max="45" step="1" value="27">
+            </label>
+
+            <label>
+              球員層級
+              <select id="level">
+                <option value="mlb">大聯盟 MLB</option>
+                <option value="aaa">3A</option>
+                <option value="aa">2A</option>
+                <option value="a_plus">高階 1A</option>
+                <option value="a">1A</option>
+                <option value="rookie">新人聯盟 / 複合聯盟</option>
+              </select>
+            </label>
+
+            <label>
+              守備位置
+              <select id="position"></select>
+            </label>
+
+            <label>
+              可控制年限
+              <input id="controlYears" type="number" min="0" max="8" step="0.5" value="2">
+            </label>
+
+            <div id="hitterStats" class="field-full field-grid">
+              <label>
+                全壘打 HR
+                <input id="hr" type="number" min="0" max="80" step="1" value="24">
+              </label>
+              <label>
+                OBP
+                <input id="obp" type="number" min="0" max="0.600" step="0.001" value="0.350">
+              </label>
+              <label>
+                SLG
+                <input id="slg" type="number" min="0" max="0.900" step="0.001" value="0.470">
+              </label>
+              <label>
+                OPS
+                <input id="ops" type="number" min="0" max="1.500" step="0.001" value="0.820">
+              </label>
+              <label>
+                wRC+
+                <input id="wrcPlus" type="number" min="0" max="250" step="1" value="122">
+              </label>
+              <label>
+                盜壘 SB
+                <input id="sb" type="number" min="0" max="90" step="1" value="8">
+              </label>
+            </div>
+
+            <div id="pitcherStats" class="field-full field-grid hidden">
+              <label>
+                投球局數 IP
+                <input id="ip" type="number" min="0" max="250" step="0.1" value="148">
+              </label>
+              <label>
+                ERA
+                <input id="era" type="number" min="0" max="15" step="0.01" value="3.45">
+              </label>
+              <label>
+                FIP
+                <input id="fip" type="number" min="0" max="15" step="0.01" value="3.62">
+              </label>
+              <label>
+                K/9
+                <input id="k9" type="number" min="0" max="20" step="0.1" value="9.4">
+              </label>
+              <label>
+                BB/9
+                <input id="bb9" type="number" min="0" max="10" step="0.1" value="2.8">
+              </label>
+              <label>
+                HR/9
+                <input id="hr9" type="number" min="0" max="5" step="0.1" value="1.0">
+              </label>
+            </div>
+
+            <label>
+              WAR（所屬層級原始值）
+              <input id="war" type="number" min="-3" max="12" step="0.1" value="3.2">
+            </label>
+
+            <label>
+              年薪（百萬美元）
+              <input id="salary" type="number" min="0" max="80" step="0.1" value="8.5">
+            </label>
+          </div>
+
+          <div class="trade-actions" aria-label="加入交易包裹">
+            <button type="button" id="addTeamA">加入 A 隊送出</button>
+            <button type="button" id="addTeamB">加入 B 隊送出</button>
+          </div>
+
+          <p class="hint">這是用於比較的簡化模型，不等同於球團真實內部估值；年齡、傷病、選秀順位與 40 人名單壓力可再另外加權。</p>
+        </form>
+
+      <section class="result-panel" aria-live="polite">
+        <div class="score-strip">
+          <div class="score-card" id="scoreCard">
+            <div>
+              <p class="score-label">交易價值分數</p>
+              <div class="score-number" id="score">74</div>
+            </div>
+            <p class="tier" id="tier">高價值主力</p>
+          </div>
+
+          <div class="detail">
+            <p class="verdict" id="verdict">薪資負擔合理，成績與位置加成都支持正向交易價值。</p>
+            <div class="value-bar" aria-label="交易價值分數進度">
+              <div class="value-fill" id="valueFill"></div>
+            </div>
+            <div class="breakdown">
+              <div class="metric"><strong id="productionScore">39</strong><span>成績</span></div>
+              <div class="metric"><strong id="warScore">27</strong><span>WAR 換算</span></div>
+              <div class="metric"><strong id="ageScore">8</strong><span>年齡曲線</span></div>
+              <div class="metric"><strong id="contextScore">15</strong><span>層級 / 位置</span></div>
+              <div class="metric"><strong id="salaryScore">-7</strong><span>薪資影響</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="diamond-wrap">
+          <svg viewBox="0 0 260 260" role="img" aria-labelledby="diamondTitle diamondDesc">
+            <title id="diamondTitle">棒球場守備位置示意</title>
+            <desc id="diamondDesc">依照目前選擇的位置，在球場圖上標出對應區域。</desc>
+            <rect x="0" y="0" width="260" height="260" rx="8" fill="#dfe9df"></rect>
+            <path d="M30 230 C44 84 216 84 230 230 Z" fill="var(--field)"></path>
+            <path d="M64 218 L130 152 L196 218 Z" fill="#c9794b"></path>
+            <path d="M91 190 L130 151 L169 190 L130 229 Z" fill="#f3dfbd"></path>
+            <circle cx="130" cy="185" r="14" fill="#c9794b"></circle>
+            <g id="positionMarker">
+              <circle cx="130" cy="218" r="12" fill="var(--blue)"></circle>
+              <text x="130" y="223" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">C</text>
+            </g>
+          </svg>
+          <div>
+            <p class="position-note" id="positionNote"><strong>捕手</strong>有明顯位置稀缺性，若能提供平均以上打擊，交易價值會被放大。</p>
+            <ul class="scenario-list" id="scenarioList">
+              <li>可作為主力升級包裹的核心球員。</li>
+              <li>若球團願意吃薪資，回報可再上修。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel war-calculator" aria-label="WAR 計算器">
+      <div class="section-head">
+        <h2>WAR 計算器</h2>
+        <div class="role-toggle" role="group" aria-label="WAR 計算類型">
+          <button type="button" id="warCalcHitterBtn" aria-pressed="true">打者 WAR</button>
+          <button type="button" id="warCalcPitcherBtn" aria-pressed="false">投手 WAR</button>
+        </div>
+      </div>
+
+      <div class="calculator-shell">
+        <div>
+          <div id="hitterWarCalc" class="field-grid">
+            <label>
+              打席 PA
+              <input id="calcPa" type="number" min="0" max="800" step="1" value="600">
+            </label>
+            <label>
+              球員 wOBA
+              <input id="calcWoba" type="number" min="0" max="0.700" step="0.001" value="0.365">
+            </label>
+            <label>
+              聯盟平均 wOBA
+              <input id="calcLeagueWoba" type="number" min="0.250" max="0.430" step="0.001" value="0.320">
+            </label>
+            <label>
+              wOBA Scale
+              <input id="calcWobaScale" type="number" min="0.900" max="1.400" step="0.001" value="1.150">
+            </label>
+            <label>
+              聯盟 R/PA
+              <input id="calcLeagueRunsPerPa" type="number" min="0.080" max="0.150" step="0.001" value="0.115">
+            </label>
+            <label>
+              球場係數 PF
+              <input id="calcParkFactor" type="number" min="80" max="125" step="1" value="100">
+            </label>
+            <label>
+              聯盟非投手 wRC/PA
+              <input id="calcLeagueWrcPerPa" type="number" min="0.080" max="0.150" step="0.001" value="0.115">
+            </label>
+            <label>
+              跑壘 BsR
+              <input id="calcBaserunning" type="number" min="-25" max="25" step="0.1" value="1.5">
+            </label>
+            <label>
+              守備分 UZR / Catcher Runs
+              <input id="calcFieldingRuns" type="number" min="-40" max="40" step="0.1" value="3">
+            </label>
+            <label>
+              位置調整 / 1350 局
+              <select id="calcPositionAdj">
+                <option value="12.5">捕手 C +12.5</option>
+                <option value="-12.5">一壘手 1B -12.5</option>
+                <option value="3.0">二壘手 2B +3.0</option>
+                <option value="2.5">三壘手 3B +2.5</option>
+                <option value="7.5">游擊手 SS +7.5</option>
+                <option value="-7.5">左外野 LF -7.5</option>
+                <option value="2.5">中外野 CF +2.5</option>
+                <option value="-7.5">右外野 RF -7.5</option>
+                <option value="-17.5">指定打擊 DH -17.5</option>
+              </select>
+            </label>
+            <label>
+              守備局數
+              <input id="calcFieldInnings" type="number" min="0" max="1500" step="1" value="1200">
+            </label>
+            <label>
+              替代水準 / 600 PA
+              <input id="calcReplacementPer600" type="number" min="12" max="28" step="0.1" value="20">
+            </label>
+            <label>
+              每 1 WAR 得分
+              <input id="calcRunsPerWar" type="number" min="7" max="12" step="0.1" value="10">
+            </label>
+          </div>
+
+          <div id="pitcherWarCalc" class="field-grid hidden">
+            <label>
+              投球局數 IP
+              <input id="calcIp" type="number" min="0" max="250" step="0.1" value="180">
+            </label>
+            <label>
+              出賽 G
+              <input id="calcGames" type="number" min="1" max="90" step="1" value="30">
+            </label>
+            <label>
+              被全壘打 HR
+              <input id="calcPitchHr" type="number" min="0" max="70" step="1" value="22">
+            </label>
+            <label>
+              保送 BB
+              <input id="calcPitchWalks" type="number" min="0" max="150" step="1" value="55">
+            </label>
+            <label>
+              觸身球 HBP
+              <input id="calcPitchHbp" type="number" min="0" max="40" step="1" value="6">
+            </label>
+            <label>
+              三振 K
+              <input id="calcStrikeouts" type="number" min="0" max="350" step="1" value="190">
+            </label>
+            <label>
+              內野飛球 IFFB
+              <input id="calcIffb" type="number" min="0" max="60" step="1" value="14">
+            </label>
+            <label>
+              投手角色
+              <select id="calcPitcherRole">
+                <option value="starter">先發投手</option>
+                <option value="reliever">救援投手</option>
+              </select>
+            </label>
+            <label>
+              ifFIP Constant
+              <input id="calcIfFipConstant" type="number" min="2" max="5" step="0.01" value="3.10">
+            </label>
+            <label>
+              聯盟 FIPR9
+              <input id="calcLeagueFipR9" type="number" min="2" max="7" step="0.01" value="4.45">
+            </label>
+            <label>
+              聯盟 RA9
+              <input id="calcLeagueRa9" type="number" min="2" max="7" step="0.01" value="4.55">
+            </label>
+            <label>
+              聯盟 ERA
+              <input id="calcLeagueEra" type="number" min="2" max="7" step="0.01" value="4.20">
+            </label>
+            <label>
+              FIP 球場係數
+              <input id="calcPitchParkFactor" type="number" min="80" max="125" step="1" value="100">
+            </label>
+            <label>
+              救援槓桿
+              <input id="calcLeverage" type="number" min="0.80" max="2.50" step="0.01" value="1.00">
+            </label>
+            <label>
+              WAR/IP 校正
+              <input id="calcWarIpCorrection" type="number" min="-0.003" max="0.001" step="0.0001" value="-0.0008">
+            </label>
+            <label>
+              替代水準 / 9 IP
+              <input id="calcPitchReplacement" type="number" min="0.20" max="0.60" step="0.01" value="0.38">
+            </label>
+          </div>
+
+          <p class="hint">FanGraphs 風格：野手以 wRAA、BsR、UZR/捕手守備、位置、聯盟、替代水準估算；投手以 ifFIP、FIPR9、球場、動態 RPW、替代水準估算。</p>
+        </div>
+
+        <div class="calc-result" id="warCalcResultCard">
+          <span id="warCalcLabel">估算打者 WAR</span>
+          <strong id="warCalcValue">3.4</strong>
+          <div class="calc-breakdown">
+            <div><strong id="warCalcRuns">34.0</strong><span>總得分</span></div>
+            <div><strong id="warCalcReplacement">19.2</strong><span>替補水準</span></div>
+            <div><strong id="warCalcContext">10.0</strong><span>Runs/WAR</span></div>
+          </div>
+          <p id="warCalcNote">可直接套用到上方 WAR 欄位。</p>
+          <div class="calc-actions">
+            <button type="button" id="applyWarCalc">套用到球員 WAR</button>
+            <button type="button" id="resetWarCalc">重設計算器</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel data-board" aria-label="動態資料庫">
+      <div class="section-head">
+        <h2>動態資料庫</h2>
+        <button type="button" id="loadDataBtn">載入資料</button>
+      </div>
+
+      <div class="data-controls">
+        <label>
+          資料來源
+          <select id="dataSource">
+            <option value="tjstats">TJStats 公開資料</option>
+            <option value="prospects">MLB/MiLB Prospects</option>
+            <option value="savant">Baseball Savant Statcast</option>
+          </select>
+        </label>
+        <label>
+          球隊
+          <select id="dataTeam"></select>
+        </label>
+        <label>
+          開始日期
+          <input id="dataStartDate" type="date" value="2026-07-01">
+        </label>
+        <label>
+          結束日期
+          <input id="dataEndDate" type="date" value="2026-08-02">
+        </label>
+        <label>
+          搜尋球員
+          <input id="dataSearch" type="search" placeholder="輸入球員名字">
+        </label>
+        <label>
+          外部 API URL
+          <input id="dataApiBase" type="url" placeholder="https://your-worker.workers.dev">
+        </label>
+      </div>
+
+      <p class="status-line" id="dataStatus">可載入 Baseball Savant Statcast 或 MLB/MiLB prospect stats，選到球員後可套用到上方估值欄位。</p>
+
+      <div class="data-table-wrap">
+        <table class="data-table" aria-label="動態資料表">
+          <thead>
+            <tr>
+              <th>球員</th>
+              <th>來源</th>
+              <th>層級 / 球隊</th>
+              <th>年齡</th>
+              <th>HR</th>
+              <th>OPS</th>
+              <th>ERA</th>
+              <th>FIP</th>
+              <th>摘要</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="dataRows">
+            <tr><td colspan="10">尚未載入資料</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel trade-board" aria-label="雙方交易比較">
+      <div class="trade-head">
+        <h2>雙方交易</h2>
+        <button type="button" id="clearTrade">清空交易</button>
+      </div>
+
+      <div class="team-settings">
+        <label>
+          A 隊
+          <select id="teamASelect"></select>
+        </label>
+        <label>
+          A 隊自訂名稱
+          <input id="teamAName" type="text" value="洛杉磯道奇">
+        </label>
+        <label>
+          B 隊
+          <select id="teamBSelect"></select>
+        </label>
+        <label>
+          B 隊自訂名稱
+          <input id="teamBName" type="text" value="紐約洋基">
+        </label>
+      </div>
+
+      <div class="cash-row">
+        <label>
+          A 隊附帶現金（百萬美元）
+          <input id="cashA" type="number" min="0" max="200" step="0.1" value="0">
+        </label>
+        <label>
+          B 隊附帶現金（百萬美元）
+          <input id="cashB" type="number" min="0" max="200" step="0.1" value="0">
+        </label>
+      </div>
+
+      <div class="trade-matchup">
+        <div class="trade-side">
+          <div class="side-title">
+            <strong id="teamALabel">洛杉磯道奇送出</strong>
+            <div class="side-total" id="teamATotal">0</div>
+          </div>
+          <div class="side-summary">
+            <div><strong id="teamACount">0</strong><span>球員</span></div>
+            <div><strong id="teamAWar">0.0</strong><span>等效 WAR</span></div>
+            <div><strong id="teamASalary">$0.0M</strong><span>年薪</span></div>
+            <div><strong id="teamAControl">0.0</strong><span>控制年</span></div>
+          </div>
+          <ul class="package-list" id="teamAList"></ul>
+        </div>
+
+        <div class="trade-center" id="tradeCenter">
+          <strong id="tradeGap">0</strong>
+          <span id="tradeVerdict">請先把球員加入雙方包裹。</span>
+          <p class="trade-advice" id="tradeAdvice">加入雙方球員後會產生建議。</p>
+        </div>
+
+        <div class="trade-side">
+          <div class="side-title">
+            <strong id="teamBLabel">紐約洋基送出</strong>
+            <div class="side-total" id="teamBTotal">0</div>
+          </div>
+          <div class="side-summary">
+            <div><strong id="teamBCount">0</strong><span>球員</span></div>
+            <div><strong id="teamBWar">0.0</strong><span>等效 WAR</span></div>
+            <div><strong id="teamBSalary">$0.0M</strong><span>年薪</span></div>
+            <div><strong id="teamBControl">0.0</strong><span>控制年</span></div>
+          </div>
+          <ul class="package-list" id="teamBList"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      role: "hitter",
+      warCalcRole: "hitter",
+      dynamicRows: [],
+      currentPhotoUrl: "",
+      currentPlayerId: "",
+      currentDataSource: "",
+      trade: {
+        teamA: [],
+        teamB: []
+      }
+    };
+
+    const positions = {
+      hitter: [
+        ["C", "捕手 C", 1.16, 130, 218, "捕手有明顯位置稀缺性，若能提供平均以上打擊，交易價值會被放大。"],
+        ["1B", "一壘手 1B", 0.94, 172, 187, "一壘手通常需要更強的打擊產出，普通 OPS 的交易溢價較有限。"],
+        ["2B", "二壘手 2B", 1.06, 130, 147, "二壘手兼具中線價值與攻守平衡，穩定 WAR 會讓市場更有興趣。"],
+        ["3B", "三壘手 3B", 1.04, 88, 187, "三壘手若有長打能力，通常能吸引需要角落火力的買家。"],
+        ["SS", "游擊手 SS", 1.18, 110, 160, "游擊手是最稀缺的野手位置之一，能守住位置會大幅提高交易價值。"],
+        ["LF", "左外野 LF", 0.96, 64, 102, "左外野評價偏重打擊，若 WAR 來自守備以外的火力會更有說服力。"],
+        ["CF", "中外野 CF", 1.12, 130, 82, "中外野有中線防守加成，平均以上打擊會形成很好的交易籌碼。"],
+        ["RF", "右外野 RF", 1.00, 196, 102, "右外野需要長打或上壘能力支撐，薪資合理時交易市場較穩。"],
+        ["DH", "指定打擊 DH", 0.86, 130, 218, "指定打擊位置彈性低，必須靠非常突出的打擊成績撐起價值。"]
+      ],
+      pitcher: [
+        ["SP", "先發投手 SP", 1.18, 130, 185, "先發投手需求長期偏高，ERA、FIP 與 WAR 同時漂亮時價值很強。"],
+        ["RP", "後援投手 RP", 0.96, 130, 185, "後援投手波動較大，頂級成績仍有價，但通常折價於同等級先發。"],
+        ["CL", "終結者 CL", 1.02, 130, 185, "終結者在爭冠球隊有短期溢價，但 FIP 能否支撐成績很關鍵。"]
+      ]
+    };
+
+    const levelFactors = {
+      mlb: { label: "大聯盟即戰力", factor: 1.18, warEq: 1.00, warLabel: "MLB WAR 原值採計" },
+      aaa: { label: "3A 接近即戰力", factor: 1.02, warEq: 0.55, warLabel: "3A WAR 以 55% 換算成 MLB 等效 WAR" },
+      aa: { label: "2A 高階潛力", factor: 0.92, warEq: 0.42, warLabel: "2A WAR 以 42% 換算成 MLB 等效 WAR" },
+      a_plus: { label: "高階 1A 發展中", factor: 0.80, warEq: 0.30, warLabel: "高階 1A WAR 以 30% 換算成 MLB 等效 WAR" },
+      a: { label: "1A 早期潛力", factor: 0.70, warEq: 0.22, warLabel: "1A WAR 以 22% 換算成 MLB 等效 WAR" },
+      rookie: { label: "新人聯盟長線彩票", factor: 0.58, warEq: 0.14, warLabel: "新人聯盟 WAR 以 14% 換算成 MLB 等效 WAR" }
+    };
+
+    const mlbTeams = [
+      ["ARI", "亞利桑那響尾蛇"], ["ATL", "亞特蘭大勇士"], ["BAL", "巴爾的摩金鶯"],
+      ["BOS", "波士頓紅襪"], ["CHC", "芝加哥小熊"], ["CWS", "芝加哥白襪"],
+      ["CIN", "辛辛那提紅人"], ["CLE", "克里夫蘭守護者"], ["COL", "科羅拉多洛磯"],
+      ["DET", "底特律老虎"], ["HOU", "休士頓太空人"], ["KC", "堪薩斯市皇家"],
+      ["LAA", "洛杉磯天使"], ["LAD", "洛杉磯道奇"], ["MIA", "邁阿密馬林魚"],
+      ["MIL", "密爾瓦基釀酒人"], ["MIN", "明尼蘇達雙城"], ["NYM", "紐約大都會"],
+      ["NYY", "紐約洋基"], ["ATH", "運動家"], ["PHI", "費城費城人"],
+      ["PIT", "匹茲堡海盜"], ["SD", "聖地牙哥教士"], ["SF", "舊金山巨人"],
+      ["SEA", "西雅圖水手"], ["STL", "聖路易紅雀"], ["TB", "坦帕灣光芒"],
+      ["TEX", "德州遊騎兵"], ["TOR", "多倫多藍鳥"], ["WSH", "華盛頓國民"]
+    ];
+
+    const mlbTeamIds = {
+      ARI: 109, ATL: 144, BAL: 110, BOS: 111, CHC: 112, CWS: 145, CIN: 113, CLE: 114,
+      COL: 115, DET: 116, HOU: 117, KC: 118, LAA: 108, LAD: 119, MIA: 146, MIL: 158,
+      MIN: 142, NYM: 121, NYY: 147, ATH: 133, PHI: 143, PIT: 134, SD: 135, SF: 137,
+      SEA: 136, STL: 138, TB: 139, TEX: 140, TOR: 141, WSH: 120
+    };
+
+    const els = {
+      hitterBtn: document.getElementById("hitterBtn"),
+      pitcherBtn: document.getElementById("pitcherBtn"),
+      hitterStats: document.getElementById("hitterStats"),
+      pitcherStats: document.getElementById("pitcherStats"),
+      position: document.getElementById("position"),
+      playerName: document.getElementById("playerName"),
+      age: document.getElementById("age"),
+      level: document.getElementById("level"),
+      controlYears: document.getElementById("controlYears"),
+      hr: document.getElementById("hr"),
+      obp: document.getElementById("obp"),
+      slg: document.getElementById("slg"),
+      ops: document.getElementById("ops"),
+      wrcPlus: document.getElementById("wrcPlus"),
+      sb: document.getElementById("sb"),
+      ip: document.getElementById("ip"),
+      era: document.getElementById("era"),
+      fip: document.getElementById("fip"),
+      k9: document.getElementById("k9"),
+      bb9: document.getElementById("bb9"),
+      hr9: document.getElementById("hr9"),
+      war: document.getElementById("war"),
+      salary: document.getElementById("salary"),
+      score: document.getElementById("score"),
+      tier: document.getElementById("tier"),
+      verdict: document.getElementById("verdict"),
+      fill: document.getElementById("valueFill"),
+      scoreCard: document.getElementById("scoreCard"),
+      productionScore: document.getElementById("productionScore"),
+      warScore: document.getElementById("warScore"),
+      ageScore: document.getElementById("ageScore"),
+      contextScore: document.getElementById("contextScore"),
+      salaryScore: document.getElementById("salaryScore"),
+      marker: document.getElementById("positionMarker"),
+      positionNote: document.getElementById("positionNote"),
+      scenarioList: document.getElementById("scenarioList"),
+      addTeamA: document.getElementById("addTeamA"),
+      addTeamB: document.getElementById("addTeamB"),
+      clearTrade: document.getElementById("clearTrade"),
+      cashA: document.getElementById("cashA"),
+      cashB: document.getElementById("cashB"),
+      teamASelect: document.getElementById("teamASelect"),
+      teamBSelect: document.getElementById("teamBSelect"),
+      teamAName: document.getElementById("teamAName"),
+      teamBName: document.getElementById("teamBName"),
+      teamALabel: document.getElementById("teamALabel"),
+      teamBLabel: document.getElementById("teamBLabel"),
+      teamAList: document.getElementById("teamAList"),
+      teamBList: document.getElementById("teamBList"),
+      teamATotal: document.getElementById("teamATotal"),
+      teamBTotal: document.getElementById("teamBTotal"),
+      teamACount: document.getElementById("teamACount"),
+      teamBCount: document.getElementById("teamBCount"),
+      teamAWar: document.getElementById("teamAWar"),
+      teamBWar: document.getElementById("teamBWar"),
+      teamASalary: document.getElementById("teamASalary"),
+      teamBSalary: document.getElementById("teamBSalary"),
+      teamAControl: document.getElementById("teamAControl"),
+      teamBControl: document.getElementById("teamBControl"),
+      tradeGap: document.getElementById("tradeGap"),
+      tradeVerdict: document.getElementById("tradeVerdict"),
+      tradeAdvice: document.getElementById("tradeAdvice"),
+      tradeCenter: document.getElementById("tradeCenter"),
+      loadDataBtn: document.getElementById("loadDataBtn"),
+      dataSource: document.getElementById("dataSource"),
+      dataTeam: document.getElementById("dataTeam"),
+      dataStartDate: document.getElementById("dataStartDate"),
+      dataEndDate: document.getElementById("dataEndDate"),
+      dataSearch: document.getElementById("dataSearch"),
+      dataApiBase: document.getElementById("dataApiBase"),
+      dataStatus: document.getElementById("dataStatus"),
+      dataRows: document.getElementById("dataRows"),
+      selectedPlayerPhoto: document.getElementById("selectedPlayerPhoto"),
+      selectedPlayerPhotoName: document.getElementById("selectedPlayerPhotoName"),
+      selectedPlayerPhotoMeta: document.getElementById("selectedPlayerPhotoMeta"),
+      warCalcHitterBtn: document.getElementById("warCalcHitterBtn"),
+      warCalcPitcherBtn: document.getElementById("warCalcPitcherBtn"),
+      hitterWarCalc: document.getElementById("hitterWarCalc"),
+      pitcherWarCalc: document.getElementById("pitcherWarCalc"),
+      calcPa: document.getElementById("calcPa"),
+      calcWoba: document.getElementById("calcWoba"),
+      calcLeagueWoba: document.getElementById("calcLeagueWoba"),
+      calcWobaScale: document.getElementById("calcWobaScale"),
+      calcLeagueRunsPerPa: document.getElementById("calcLeagueRunsPerPa"),
+      calcParkFactor: document.getElementById("calcParkFactor"),
+      calcLeagueWrcPerPa: document.getElementById("calcLeagueWrcPerPa"),
+      calcBaserunning: document.getElementById("calcBaserunning"),
+      calcFieldingRuns: document.getElementById("calcFieldingRuns"),
+      calcPositionAdj: document.getElementById("calcPositionAdj"),
+      calcFieldInnings: document.getElementById("calcFieldInnings"),
+      calcReplacementPer600: document.getElementById("calcReplacementPer600"),
+      calcRunsPerWar: document.getElementById("calcRunsPerWar"),
+      calcIp: document.getElementById("calcIp"),
+      calcGames: document.getElementById("calcGames"),
+      calcPitchHr: document.getElementById("calcPitchHr"),
+      calcPitchWalks: document.getElementById("calcPitchWalks"),
+      calcPitchHbp: document.getElementById("calcPitchHbp"),
+      calcStrikeouts: document.getElementById("calcStrikeouts"),
+      calcIffb: document.getElementById("calcIffb"),
+      calcPitcherRole: document.getElementById("calcPitcherRole"),
+      calcIfFipConstant: document.getElementById("calcIfFipConstant"),
+      calcLeagueFipR9: document.getElementById("calcLeagueFipR9"),
+      calcLeagueRa9: document.getElementById("calcLeagueRa9"),
+      calcLeagueEra: document.getElementById("calcLeagueEra"),
+      calcPitchParkFactor: document.getElementById("calcPitchParkFactor"),
+      calcLeverage: document.getElementById("calcLeverage"),
+      calcWarIpCorrection: document.getElementById("calcWarIpCorrection"),
+      calcPitchReplacement: document.getElementById("calcPitchReplacement"),
+      warCalcLabel: document.getElementById("warCalcLabel"),
+      warCalcValue: document.getElementById("warCalcValue"),
+      warCalcRuns: document.getElementById("warCalcRuns"),
+      warCalcReplacement: document.getElementById("warCalcReplacement"),
+      warCalcContext: document.getElementById("warCalcContext"),
+      warCalcNote: document.getElementById("warCalcNote"),
+      applyWarCalc: document.getElementById("applyWarCalc"),
+      resetWarCalc: document.getElementById("resetWarCalc")
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function currentPosition() {
+      return positions[state.role].find(item => item[0] === els.position.value) || positions[state.role][0];
+    }
+
+    function populatePositions() {
+      els.position.innerHTML = "";
+      positions[state.role].forEach(([id, label]) => {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = label;
+        els.position.appendChild(option);
+      });
+    }
+
+    function populateTeams() {
+      [els.teamASelect, els.teamBSelect].forEach(select => {
+        select.innerHTML = "";
+        mlbTeams.forEach(([id, name]) => {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = `${id} · ${name}`;
+          select.appendChild(option);
+        });
+      });
+      els.teamASelect.value = "LAD";
+      els.teamBSelect.value = "NYY";
+    }
+
+    function populateDataTeams() {
+      els.dataTeam.innerHTML = '<option value="">全部球隊</option>';
+      mlbTeams.forEach(([id, name]) => {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = `${id} · ${name}`;
+        els.dataTeam.appendChild(option);
+      });
+    }
+
+    function setRole(role) {
+      state.role = role;
+      els.hitterBtn.setAttribute("aria-pressed", String(role === "hitter"));
+      els.pitcherBtn.setAttribute("aria-pressed", String(role === "pitcher"));
+      els.hitterStats.classList.toggle("hidden", role !== "hitter");
+      els.pitcherStats.classList.toggle("hidden", role !== "pitcher");
+      populatePositions();
+      calculate();
+    }
+
+    function setWarCalcRole(role) {
+      state.warCalcRole = role;
+      els.warCalcHitterBtn.setAttribute("aria-pressed", String(role === "hitter"));
+      els.warCalcPitcherBtn.setAttribute("aria-pressed", String(role === "pitcher"));
+      els.hitterWarCalc.classList.toggle("hidden", role !== "hitter");
+      els.pitcherWarCalc.classList.toggle("hidden", role !== "pitcher");
+      calculateWar();
+    }
+
+    function tierFor(score) {
+      if (score >= 86) return ["頂級交易資產", "var(--good)"];
+      if (score >= 70) return ["高價值主力", "var(--blue)"];
+      if (score >= 54) return ["正資產球員", "var(--gold)"];
+      if (score >= 38) return ["中性或情境價值", "var(--warn)"];
+      return ["低交易價值", "var(--bad)"];
+    }
+
+    function ageComponent(age, role, levelKey) {
+      const isMinor = levelKey !== "mlb";
+      if (isMinor) {
+        if (age <= 20) return 12;
+        if (age <= 22) return 10;
+        if (age <= 24) return 7;
+        if (age <= 26) return 4;
+        if (age <= 28) return 1;
+        return -4;
+      }
+
+      if (role === "pitcher") {
+        if (age <= 24) return 9;
+        if (age <= 28) return 8;
+        if (age <= 31) return 5;
+        if (age <= 34) return 1;
+        if (age <= 37) return -4;
+        return -8;
+      }
+
+      if (age <= 23) return 9;
+      if (age <= 27) return 8;
+      if (age <= 30) return 5;
+      if (age <= 33) return 1;
+      if (age <= 36) return -4;
+      return -8;
+    }
+
+    function compensationAdvice(points) {
+      if (points <= 5) return "不需要明顯補償；可以用現金、低階籌碼或小幅薪資吸收微調。";
+      if (points <= 12) return "建議補一名 40 FV 左右的低階新秀，或約 $8M-$15M 的現金價值。";
+      if (points <= 24) return "建議補一名 45 FV 新秀、實用輪替球員，或吃下一份中等薪資。";
+      if (points <= 40) return "建議補一名 50 FV 新秀、年輕大聯盟輪替球員，或提高為多人包裹。";
+      return "差距很大，通常需要 55 FV 以上主菜、受控主力，或重新設計交易框架。";
+    }
+
+    function calculateWar() {
+      let war = 0;
+      let runs = 0;
+      let replacement = 0;
+      let runsPerWar = 10;
+
+      if (state.warCalcRole === "hitter") {
+        const pa = Number(els.calcPa.value) || 0;
+        const woba = Number(els.calcWoba.value) || 0;
+        const leagueWoba = Number(els.calcLeagueWoba.value) || 0.320;
+        const wobaScale = Number(els.calcWobaScale.value) || 1.15;
+        const leagueRunsPerPa = Number(els.calcLeagueRunsPerPa.value) || 0.115;
+        const parkFactor = (Number(els.calcParkFactor.value) || 100) / 100;
+        const leagueWrcPerPa = Number(els.calcLeagueWrcPerPa.value) || leagueRunsPerPa;
+        const baserunningRuns = Number(els.calcBaserunning.value) || 0;
+        const fieldingRuns = Number(els.calcFieldingRuns.value) || 0;
+        const positionFullSeason = Number(els.calcPositionAdj.value) || 0;
+        const fieldInnings = Number(els.calcFieldInnings.value) || 0;
+        const replacementPer600 = Number(els.calcReplacementPer600.value) || 20;
+        runsPerWar = Number(els.calcRunsPerWar.value) || 10;
+
+        const wraa = ((woba - leagueWoba) / wobaScale) * pa;
+        const parkAdjustment = (leagueRunsPerPa - (parkFactor * leagueRunsPerPa)) * pa;
+        const leagueAdjustment = (leagueRunsPerPa - leagueWrcPerPa) * pa;
+        const battingRuns = wraa + parkAdjustment + leagueAdjustment;
+        const positionRuns = positionFullSeason * clamp(fieldInnings / 1350, 0, 1.15);
+        replacement = (replacementPer600 / 600) * pa;
+        runs = battingRuns + baserunningRuns + fieldingRuns + positionRuns + replacement;
+        war = runs / runsPerWar;
+        els.warCalcLabel.textContent = "FanGraphs 風格野手 WAR";
+        els.warCalcNote.textContent = `wRAA ${wraa.toFixed(1)}，Batting ${battingRuns.toFixed(1)}，BsR ${baserunningRuns.toFixed(1)}，Fielding ${fieldingRuns.toFixed(1)}。`;
+      } else {
+        const ip = Number(els.calcIp.value) || 0;
+        const games = Number(els.calcGames.value) || 1;
+        const homers = Number(els.calcPitchHr.value) || 0;
+        const walks = Number(els.calcPitchWalks.value) || 0;
+        const hbp = Number(els.calcPitchHbp.value) || 0;
+        const strikeouts = Number(els.calcStrikeouts.value) || 0;
+        const iffb = Number(els.calcIffb.value) || 0;
+        const role = els.calcPitcherRole.value;
+        const ifFipConstant = Number(els.calcIfFipConstant.value) || 3.10;
+        const leagueFipR9 = Number(els.calcLeagueFipR9.value) || 4.45;
+        const leagueRa9 = Number(els.calcLeagueRa9.value) || 4.55;
+        const leagueEra = Number(els.calcLeagueEra.value) || 4.20;
+        const pitchParkFactor = (Number(els.calcPitchParkFactor.value) || 100) / 100;
+        const leverage = Number(els.calcLeverage.value) || 1;
+        const warIpCorrection = Number(els.calcWarIpCorrection.value) || 0;
+        const replacementLevel = Number(els.calcPitchReplacement.value) || 0.38;
+
+        const ifFip = ip > 0 ? (((13 * homers) + (3 * (walks + hbp)) - (2 * (strikeouts + iffb))) / ip) + ifFipConstant : 0;
+        const fipR9 = ifFip + (leagueRa9 - leagueEra);
+        const parkAdjustedFipR9 = fipR9 / pitchParkFactor;
+        const runsAboveAveragePer9 = leagueFipR9 - parkAdjustedFipR9;
+        const ipPerGame = ip / Math.max(games, 1);
+        runsPerWar = ((((18 - ipPerGame) * leagueFipR9) + (ipPerGame * parkAdjustedFipR9)) / 18 + 2) * 1.5;
+        const averageWins = runsAboveAveragePer9 / runsPerWar;
+        replacement = replacementLevel;
+        let pitcherWar = (averageWins + replacementLevel) * (ip / 9);
+        if (role === "reliever") pitcherWar *= leverage;
+        const correction = warIpCorrection * ip;
+        war = pitcherWar + correction;
+        runs = war * runsPerWar;
+        els.warCalcLabel.textContent = "FanGraphs 風格投手 WAR";
+        els.warCalcNote.textContent = `ifFIP ${ifFip.toFixed(2)}，pFIPR9 ${parkAdjustedFipR9.toFixed(2)}，RAAP9 ${runsAboveAveragePer9.toFixed(2)}。`;
+      }
+
+      const roundedWar = clamp(war, -5, 12);
+      els.warCalcValue.textContent = roundedWar.toFixed(1);
+      els.warCalcRuns.textContent = runs.toFixed(1);
+      els.warCalcReplacement.textContent = replacement.toFixed(1);
+      els.warCalcContext.textContent = runsPerWar.toFixed(1);
+      return roundedWar;
+    }
+
+    function resetWarCalculator() {
+      els.calcPa.value = 600;
+      els.calcWoba.value = 0.365;
+      els.calcLeagueWoba.value = 0.320;
+      els.calcWobaScale.value = 1.150;
+      els.calcLeagueRunsPerPa.value = 0.115;
+      els.calcParkFactor.value = 100;
+      els.calcLeagueWrcPerPa.value = 0.115;
+      els.calcBaserunning.value = 1.5;
+      els.calcFieldingRuns.value = 3;
+      els.calcPositionAdj.value = 12.5;
+      els.calcFieldInnings.value = 1200;
+      els.calcReplacementPer600.value = 20;
+      els.calcRunsPerWar.value = 10;
+      els.calcIp.value = 180;
+      els.calcGames.value = 30;
+      els.calcPitchHr.value = 22;
+      els.calcPitchWalks.value = 55;
+      els.calcPitchHbp.value = 6;
+      els.calcStrikeouts.value = 190;
+      els.calcIffb.value = 14;
+      els.calcPitcherRole.value = "starter";
+      els.calcIfFipConstant.value = 3.10;
+      els.calcLeagueFipR9.value = 4.45;
+      els.calcLeagueRa9.value = 4.55;
+      els.calcLeagueEra.value = 4.20;
+      els.calcPitchParkFactor.value = 100;
+      els.calcLeverage.value = 1.00;
+      els.calcWarIpCorrection.value = -0.0008;
+      els.calcPitchReplacement.value = 0.38;
+      calculateWar();
+    }
+
+    function buildValuation() {
+      const position = currentPosition();
+      const level = levelFactors[els.level.value];
+      const age = Number(els.age.value) || 0;
+      const war = Number(els.war.value) || 0;
+      const salary = Number(els.salary.value) || 0;
+      const controlYears = Number(els.controlYears.value) || 0;
+      const mlbEquivalentWar = war * level.warEq;
+      const ageScore = ageComponent(age, state.role, els.level.value);
+      let production = 0;
+      let statLine = "";
+
+      if (state.role === "hitter") {
+        const hr = Number(els.hr.value) || 0;
+        const obp = Number(els.obp.value) || 0;
+        const slg = Number(els.slg.value) || 0;
+        const ops = Number(els.ops.value) || 0;
+        const wrcPlus = Number(els.wrcPlus.value) || 0;
+        const sb = Number(els.sb.value) || 0;
+        const powerScore = (hr / 45) * 12 + ((slg - 0.360) / 0.260) * 8;
+        const onBaseScore = ((obp - 0.290) / 0.110) * 10;
+        const overallScore = ((ops - 0.650) / 0.320) * 8 + ((wrcPlus - 85) / 70) * 10;
+        const speedScore = Math.min(sb / 35 * 4, 4);
+        production = clamp(powerScore + onBaseScore + overallScore + speedScore, 0, 46);
+        statLine = `HR ${hr} / OBP ${obp.toFixed(3)} / SLG ${slg.toFixed(3)} / OPS ${ops.toFixed(3)} / wRC+ ${wrcPlus} / SB ${sb}`;
+      } else {
+        const ip = Number(els.ip.value) || 0;
+        const era = Number(els.era.value) || 0;
+        const fip = Number(els.fip.value) || 0;
+        const k9 = Number(els.k9.value) || 0;
+        const bb9 = Number(els.bb9.value) || 0;
+        const hr9 = Number(els.hr9.value) || 0;
+        const workloadScore = state.role === "pitcher" && position[0] === "SP" ? Math.min(ip / 180 * 8, 8) : Math.min(ip / 70 * 6, 6);
+        const eraScore = ((5.20 - era) / 2.70) * 14;
+        const fipScore = ((5.00 - fip) / 2.60) * 14;
+        const strikeoutScore = ((k9 - 6.5) / 5.0) * 9;
+        const commandScore = ((4.2 - bb9) / 2.4) * 7;
+        const homerScore = ((1.7 - hr9) / 1.0) * 4;
+        production = clamp(workloadScore + eraScore + fipScore + strikeoutScore + commandScore + homerScore, 0, 46);
+        statLine = `IP ${ip.toFixed(1)} / ERA ${era.toFixed(2)} / FIP ${fip.toFixed(2)} / K/9 ${k9.toFixed(1)} / BB/9 ${bb9.toFixed(1)} / HR/9 ${hr9.toFixed(1)}`;
+      }
+
+      const warComponent = clamp((mlbEquivalentWar + 0.3) / 6.3 * 34, 0, 34);
+      const context = clamp((level.factor * position[2] - 0.70) * 32, 0, 22);
+      const expectedSalary = Math.max(0, mlbEquivalentWar * 8.5);
+      const salaryImpact = clamp((expectedSalary - salary) / 2.1, -18, 14);
+      const controlBonus = clamp(controlYears * 2.2, 0, 14);
+      const rawScore = (production + warComponent + ageScore + context + salaryImpact + controlBonus) * level.factor;
+      const score = Math.round(clamp(rawScore, 0, 99));
+      const [tierLabel, color] = tierFor(score);
+
+      return {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: els.playerName.value.trim() || (state.role === "hitter" ? "未命名打者" : "未命名投手"),
+        age,
+        role: state.role,
+        roleLabel: state.role === "hitter" ? "打者" : "投手",
+        positionId: position[0],
+        positionLabel: position[1],
+        positionNote: position[5],
+        levelKey: els.level.value,
+        levelLabel: level.label,
+        war,
+        mlbEquivalentWar,
+        salary,
+        controlYears,
+        production,
+        statLine,
+        warComponent,
+        ageScore,
+        context,
+        salaryImpact,
+        controlBonus,
+        score,
+        tierLabel,
+        color,
+        photoUrl: state.currentPhotoUrl,
+        playerId: state.currentPlayerId,
+        dataSource: state.currentDataSource
+      };
+    }
+
+    function calculate() {
+      const valuation = buildValuation();
+      const position = currentPosition();
+      const level = levelFactors[els.level.value];
+      const score = valuation.score;
+      const salaryImpact = valuation.salaryImpact;
+
+      els.score.textContent = score;
+      els.tier.textContent = valuation.tierLabel;
+      els.fill.style.width = `${score}%`;
+      els.scoreCard.style.setProperty("--score-color", valuation.color);
+      els.productionScore.textContent = Math.round(valuation.production);
+      els.warScore.textContent = Math.round(valuation.warComponent);
+      els.ageScore.textContent = Math.round(valuation.ageScore);
+      els.contextScore.textContent = Math.round(valuation.context + valuation.controlBonus);
+      els.salaryScore.textContent = Math.round(salaryImpact);
+
+      const salaryText = salaryImpact >= 6 ? "薪資相對便宜，買方會願意付出更好的包裹。" :
+        salaryImpact <= -8 ? "薪資壓力明顯，除非賣方吃薪資，否則回報會被壓低。" :
+        "薪資負擔合理，成績與位置加成都支持正向交易價值。";
+      const levelText = els.level.value === "mlb" ? "他是即戰力評估，WAR 直接採計。" : `他屬於${level.label}，${level.warLabel}。`;
+      const ageText = valuation.ageScore >= 8 ? "年齡曲線加分明顯。" :
+        valuation.ageScore < 0 ? "年齡會讓市場估值打折。" :
+        "年齡影響接近中性。";
+      els.verdict.textContent = `${salaryText} ${levelText} ${ageText}`;
+
+      els.marker.innerHTML = `<circle cx="${position[3]}" cy="${position[4]}" r="13" fill="var(--blue)"></circle><text x="${position[3]}" y="${position[4] + 5}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">${position[0]}</text>`;
+      els.positionNote.innerHTML = `<strong>${position[1]}</strong>：${position[5]}`;
+
+      const list = [];
+      if (score >= 86) {
+        list.push("可作為明星級交易案的主要回報。");
+        list.push("除非球隊進入重建，通常不急著出售。");
+      } else if (score >= 70) {
+        list.push("可作為主力升級包裹的核心球員。");
+        list.push("若球團願意吃薪資，回報可再上修。");
+      } else if (score >= 54) {
+        list.push("適合搭配其他籌碼換取短期補強。");
+        list.push("市場價值取決於買方對位置需求的急迫性。");
+      } else if (score >= 38) {
+        list.push("比較像需求型交易籌碼。");
+        list.push("若有剩餘控制年限或選項權，價值會更穩。");
+      } else {
+        list.push("單獨交易回報有限。");
+        list.push("需要薪資補貼、附帶潛力股，或等待成績反彈。");
+      }
+      els.scenarioList.innerHTML = list.map(item => `<li>${item}</li>`).join("");
+    }
+
+    function packageTotal(side) {
+      return state.trade[side].reduce((sum, player) => sum + player.score, 0);
+    }
+
+    function packageSummary(side) {
+      return state.trade[side].reduce((summary, player) => {
+        summary.count += 1;
+        summary.war += player.mlbEquivalentWar;
+        summary.salary += player.salary;
+        summary.control += player.controlYears;
+        return summary;
+      }, { count: 0, war: 0, salary: 0, control: 0 });
+    }
+
+    function selectedTeamName(selectEl, inputEl) {
+      const custom = inputEl.value.trim();
+      if (custom) return custom;
+      const found = mlbTeams.find(([id]) => id === selectEl.value);
+      return found ? found[1] : "球隊";
+    }
+
+    function syncTeamName(selectEl, inputEl) {
+      const found = mlbTeams.find(([id]) => id === selectEl.value);
+      inputEl.value = found ? found[1] : "";
+      renderTrade();
+    }
+
+    function cashValue(input) {
+      return (Number(input.value) || 0) * 0.8;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function normalizeLevel(level) {
+      const value = String(level || "").toUpperCase();
+      if (value.includes("MLB")) return "mlb";
+      if (value.includes("AAA") || value.includes("3A")) return "aaa";
+      if (value.includes("AA")) return "aa";
+      if (value.includes("A+")) return "a_plus";
+      if (value === "A" || value.includes("A ")) return "a";
+      return "rookie";
+    }
+
+    function dynamicApiUrl(source, params) {
+      const base = els.dataApiBase.value.trim().replace(/\/+$/, "");
+      if (base) {
+        localStorage.setItem("mlbTradeApiBase", base);
+        return `${base}/api/${source}?${params.toString()}`;
+      }
+      localStorage.removeItem("mlbTradeApiBase");
+      return `/api/${source}?${params.toString()}`;
+    }
+
+    function updateSelectedPhoto(row) {
+      const photoUrl = row?.photoUrl || "";
+      state.currentPhotoUrl = photoUrl;
+      state.currentPlayerId = row?.playerId || "";
+      state.currentDataSource = row?.sourceLabel || "";
+
+      if (photoUrl) {
+        els.selectedPlayerPhoto.src = photoUrl;
+        els.selectedPlayerPhoto.hidden = false;
+        els.selectedPlayerPhotoName.textContent = row.name || "已套用球員照片";
+        els.selectedPlayerPhotoMeta.textContent = `${row.sourceLabel || "資料庫"} / ${row.team || row.level || "球員資料"}`;
+      } else {
+        els.selectedPlayerPhoto.removeAttribute("src");
+        els.selectedPlayerPhoto.hidden = true;
+        els.selectedPlayerPhotoName.textContent = "尚未套用資料庫照片";
+        els.selectedPlayerPhotoMeta.textContent = "從動態資料庫套用球員後會顯示官方照片";
+      }
+    }
+
+    function renderDataRows() {
+      const term = els.dataSearch.value.trim().toLowerCase();
+      const rows = state.dynamicRows.filter(row => !term || row.name.toLowerCase().includes(term));
+      if (!rows.length) {
+        els.dataRows.innerHTML = '<tr><td colspan="10">沒有符合的資料</td></tr>';
+        return;
+      }
+
+      els.dataRows.innerHTML = rows.slice(0, 80).map(row => {
+        const originalIndex = state.dynamicRows.indexOf(row);
+        return `
+        <tr>
+          <td><div class="player-cell">${row.photoUrl ? `<img class="player-photo" src="${escapeHtml(row.photoUrl)}" alt="${escapeHtml(row.name)} 照片" loading="lazy">` : ""}<strong>${escapeHtml(row.name)}</strong></div></td>
+          <td>${escapeHtml(row.sourceLabel)}</td>
+          <td>${escapeHtml(row.level || row.team || "")}</td>
+          <td>${row.age ?? ""}</td>
+          <td>${row.hr ?? ""}</td>
+          <td>${row.ops ?? ""}</td>
+          <td>${row.era ?? ""}</td>
+          <td>${row.fip ?? ""}</td>
+          <td>${escapeHtml(row.summary || "")}</td>
+          <td><button type="button" data-data-index="${originalIndex}">套用</button></td>
+        </tr>
+      `;
+      }).join("");
+    }
+
+    async function loadDynamicData() {
+      const source = els.dataSource.value;
+      const team = els.dataTeam.value;
+      const params = new URLSearchParams();
+      if (source === "tjstats") {
+        params.set("q", els.dataSearch.value.trim());
+      } else if (source === "savant") {
+        params.set("start", els.dataStartDate.value);
+        params.set("end", els.dataEndDate.value);
+        if (team) params.set("team", team);
+      } else {
+        if (team) params.set("teamId", String(mlbTeamIds[team] || ""));
+        params.set("dateRange", "season");
+      }
+
+      els.dataStatus.textContent = "正在載入資料...";
+      els.loadDataBtn.disabled = true;
+      try {
+        const response = await fetch(dynamicApiUrl(source, params));
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "資料載入失敗");
+        state.dynamicRows = payload.rows || [];
+        els.dataStatus.textContent = `${payload.source || "資料來源"} 已載入 ${state.dynamicRows.length} 筆資料。`;
+        renderDataRows();
+      } catch (error) {
+        state.dynamicRows = [];
+        els.dataRows.innerHTML = '<tr><td colspan="10">資料載入失敗</td></tr>';
+        els.dataStatus.textContent = `資料載入失敗：${error.message}`;
+      } finally {
+        els.loadDataBtn.disabled = false;
+      }
+    }
+
+    function applyDataRow(row) {
+      if (!row) return;
+      updateSelectedPhoto(row);
+      els.playerName.value = row.name || els.playerName.value;
+      if (row.age) els.age.value = row.age;
+      if (row.level) els.level.value = normalizeLevel(row.level);
+      if (row.type === "pitcher") {
+        setRole("pitcher");
+        if (row.era !== undefined) els.era.value = row.era;
+        if (row.fip !== undefined) els.fip.value = row.fip;
+        if (row.ip !== undefined) els.ip.value = row.ip;
+        if (row.k9 !== undefined) els.k9.value = row.k9;
+        if (row.bb9 !== undefined) els.bb9.value = row.bb9;
+        if (row.hr9 !== undefined) els.hr9.value = row.hr9;
+      } else {
+        setRole("hitter");
+        if (row.hr !== undefined) els.hr.value = row.hr;
+        if (row.ops !== undefined) els.ops.value = row.ops;
+        if (row.obp !== undefined) els.obp.value = row.obp;
+        if (row.slg !== undefined) els.slg.value = row.slg;
+        if (row.sb !== undefined) els.sb.value = row.sb;
+        if (row.wrcPlus !== undefined) els.wrcPlus.value = row.wrcPlus;
+      }
+      calculate();
+      els.dataStatus.textContent = `已套用 ${row.name} 到估值表。`;
+    }
+
+    function renderPackage(side, listEl) {
+      const players = state.trade[side];
+      if (!players.length) {
+        listEl.innerHTML = `<li><div class="player-line"><strong>尚未加入球員</strong><span>用上方目前球員加入交易包裹</span></div></li>`;
+        return;
+      }
+
+      listEl.innerHTML = players.map(player => `
+        <li>
+          <div class="player-line">
+            ${player.photoUrl ? `<img class="trade-photo" src="${escapeHtml(player.photoUrl)}" alt="${escapeHtml(player.name)} 照片" loading="lazy">` : ""}
+            <strong>${escapeHtml(player.name)} · ${player.age} 歲 · ${player.score} 分 · ${escapeHtml(player.tierLabel)}</strong>
+            <span>${escapeHtml(player.roleLabel)} / ${escapeHtml(player.positionLabel)} / ${escapeHtml(player.levelLabel)} / WAR ${player.war.toFixed(1)} → 等效 ${player.mlbEquivalentWar.toFixed(1)} / $${player.salary.toFixed(1)}M / ${player.controlYears} 年控制權</span>
+            <span>${escapeHtml(player.statLine)}</span>
+          </div>
+          <button type="button" class="remove-btn" data-side="${side}" data-id="${player.id}">移除</button>
+        </li>
+      `).join("");
+    }
+
+    function renderTrade() {
+      const cashA = cashValue(els.cashA);
+      const cashB = cashValue(els.cashB);
+      const totalA = Math.round(packageTotal("teamA") + cashA);
+      const totalB = Math.round(packageTotal("teamB") + cashB);
+      const summaryA = packageSummary("teamA");
+      const summaryB = packageSummary("teamB");
+      const gap = totalA - totalB;
+      const absGap = Math.abs(gap);
+      const nameA = selectedTeamName(els.teamASelect, els.teamAName);
+      const nameB = selectedTeamName(els.teamBSelect, els.teamBName);
+
+      els.teamATotal.textContent = totalA;
+      els.teamBTotal.textContent = totalB;
+      els.tradeGap.textContent = absGap;
+      els.teamALabel.textContent = `${nameA}送出`;
+      els.teamBLabel.textContent = `${nameB}送出`;
+      els.addTeamA.textContent = `加入 ${nameA} 送出`;
+      els.addTeamB.textContent = `加入 ${nameB} 送出`;
+      els.teamACount.textContent = summaryA.count;
+      els.teamBCount.textContent = summaryB.count;
+      els.teamAWar.textContent = summaryA.war.toFixed(1);
+      els.teamBWar.textContent = summaryB.war.toFixed(1);
+      els.teamASalary.textContent = `$${summaryA.salary.toFixed(1)}M`;
+      els.teamBSalary.textContent = `$${summaryB.salary.toFixed(1)}M`;
+      els.teamAControl.textContent = summaryA.control.toFixed(1);
+      els.teamBControl.textContent = summaryB.control.toFixed(1);
+      renderPackage("teamA", els.teamAList);
+      renderPackage("teamB", els.teamBList);
+
+      if (!state.trade.teamA.length && !state.trade.teamB.length && cashA === 0 && cashB === 0) {
+        els.tradeVerdict.textContent = "請先把球員加入雙方包裹。";
+        els.tradeAdvice.textContent = "加入雙方球員後會產生建議。";
+        els.tradeCenter.style.background = "var(--blue)";
+        return;
+      }
+
+      if (absGap <= 5) {
+        els.tradeVerdict.textContent = `${nameA} 與 ${nameB} 的包裹接近公平。`;
+        els.tradeAdvice.textContent = compensationAdvice(absGap);
+        els.tradeCenter.style.background = "var(--good)";
+      } else if (gap > 0) {
+        els.tradeVerdict.textContent = `${nameA} 送出的價值較高，${nameB} 需要補約 ${absGap} 分價值。`;
+        els.tradeAdvice.textContent = compensationAdvice(absGap);
+        els.tradeCenter.style.background = "var(--warn)";
+      } else {
+        els.tradeVerdict.textContent = `${nameB} 送出的價值較高，${nameA} 需要補約 ${absGap} 分價值。`;
+        els.tradeAdvice.textContent = compensationAdvice(absGap);
+        els.tradeCenter.style.background = "var(--warn)";
+      }
+    }
+
+    function addCurrentPlayer(side) {
+      state.trade[side].push(buildValuation());
+      renderTrade();
+    }
+
+    function removePlayer(side, id) {
+      state.trade[side] = state.trade[side].filter(player => player.id !== id);
+      renderTrade();
+    }
+
+    els.hitterBtn.addEventListener("click", () => setRole("hitter"));
+    els.pitcherBtn.addEventListener("click", () => setRole("pitcher"));
+    els.warCalcHitterBtn.addEventListener("click", () => setWarCalcRole("hitter"));
+    els.warCalcPitcherBtn.addEventListener("click", () => setWarCalcRole("pitcher"));
+    document.querySelector(".war-calculator").addEventListener("input", calculateWar);
+    document.querySelector(".war-calculator").addEventListener("change", calculateWar);
+    els.applyWarCalc.addEventListener("click", () => {
+      els.war.value = calculateWar().toFixed(1);
+      calculate();
+    });
+    els.resetWarCalc.addEventListener("click", resetWarCalculator);
+    els.addTeamA.addEventListener("click", () => addCurrentPlayer("teamA"));
+    els.addTeamB.addEventListener("click", () => addCurrentPlayer("teamB"));
+    els.clearTrade.addEventListener("click", () => {
+      state.trade.teamA = [];
+      state.trade.teamB = [];
+      els.cashA.value = 0;
+      els.cashB.value = 0;
+      renderTrade();
+    });
+    els.teamAList.addEventListener("click", event => {
+      const button = event.target.closest("button[data-side]");
+      if (button) removePlayer(button.dataset.side, button.dataset.id);
+    });
+    els.teamBList.addEventListener("click", event => {
+      const button = event.target.closest("button[data-side]");
+      if (button) removePlayer(button.dataset.side, button.dataset.id);
+    });
+    document.getElementById("valuationForm").addEventListener("input", calculate);
+    document.getElementById("valuationForm").addEventListener("change", calculate);
+    els.cashA.addEventListener("input", renderTrade);
+    els.cashB.addEventListener("input", renderTrade);
+    els.teamAName.addEventListener("input", renderTrade);
+    els.teamBName.addEventListener("input", renderTrade);
+    els.teamASelect.addEventListener("change", () => syncTeamName(els.teamASelect, els.teamAName));
+    els.teamBSelect.addEventListener("change", () => syncTeamName(els.teamBSelect, els.teamBName));
+    els.loadDataBtn.addEventListener("click", loadDynamicData);
+    els.dataSearch.addEventListener("input", renderDataRows);
+    els.dataApiBase.addEventListener("change", () => {
+      const base = els.dataApiBase.value.trim();
+      if (base) localStorage.setItem("mlbTradeApiBase", base.replace(/\/+$/, ""));
+      else localStorage.removeItem("mlbTradeApiBase");
+    });
+    els.dataRows.addEventListener("click", event => {
+      const button = event.target.closest("button[data-data-index]");
+      if (button) applyDataRow(state.dynamicRows[Number(button.dataset.dataIndex)]);
+    });
+
+    populateTeams();
+    populateDataTeams();
+    els.dataApiBase.value = localStorage.getItem("mlbTradeApiBase") || "";
+    populatePositions();
+    updateSelectedPhoto(null);
+    calculateWar();
+    calculate();
+    renderTrade();
+  </script>
+</body>
+</html>
