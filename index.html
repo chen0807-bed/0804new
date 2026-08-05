@@ -1991,6 +1991,13 @@
 
     function dataPrimaryStats(row) {
       if (row?.source === "tjstats") {
+        if (row?.type === "pitcher") {
+          return {
+            main: `Pitches ${row.pitches || "-"} / K% ${row.kPercent || "-"} / BB% ${row.bbPercent || "-"}`,
+            sub: `Whiff% ${row.whiffPercent || "-"} / Zone% ${row.zonePercent || "-"} / FB Velo ${row.fbVelo || "-"}`
+          };
+        }
+
         return {
           main: `PA ${row.pa || "-"} / AVG ${row.avg || "-"} / wOBA ${row.woba || "-"} / xwOBA ${row.xwoba || "-"}`,
           sub: `K% ${row.kPercent || "-"} / BB% ${row.bbPercent || "-"} / Whiff% ${row.whiffPercent || "-"} / Barrel% ${row.barrelPercent || row.hardHitPercent || "-"} / FB Velo ${row.fbVelo || "-"}`
@@ -2025,16 +2032,28 @@
         const roleLabel = dataRoleLabel(row);
         const roleClass = row.type === "pitcher" ? "pitcher" : "hitter";
         if (els.dataSource.value === "tjstats") {
+          const tjCount = row.type === "pitcher"
+            ? `<strong>Pitches ${escapeHtml(row.pitches || "-")}</strong><br><span>PA ${escapeHtml(row.pa || "-")}</span>`
+            : `<strong>PA ${escapeHtml(row.pa || "-")}</strong><br><span>Pitches ${escapeHtml(row.pitches || "-")}</span>`;
+          const tjQuality = row.type === "pitcher"
+            ? `<strong>K% ${escapeHtml(row.kPercent || "-")}</strong><br><span>BB% ${escapeHtml(row.bbPercent || "-")} / Whiff% ${escapeHtml(row.whiffPercent || "-")}</span>`
+            : `<strong>AVG ${escapeHtml(row.avg || "-")}</strong><br><span>wOBA ${escapeHtml(row.woba || "-")} / xwOBA ${escapeHtml(row.xwoba || "-")}</span>`;
+          const tjDiscipline = row.type === "pitcher"
+            ? `<strong>Zone% ${escapeHtml(row.zonePercent || "-")}</strong><br><span>FB Velo ${escapeHtml(row.fbVelo || "-")}</span>`
+            : `<strong>K% ${escapeHtml(row.kPercent || "-")}</strong><br><span>BB% ${escapeHtml(row.bbPercent || "-")} / Whiff% ${escapeHtml(row.whiffPercent || "-")}</span>`;
+          const tjContact = row.type === "pitcher"
+            ? `<strong>AVG ${escapeHtml(row.avg || "-")}</strong><br><span>wOBA ${escapeHtml(row.woba || "-")} / xwOBA ${escapeHtml(row.xwoba || "-")}</span>`
+            : `<strong>Barrel% ${escapeHtml(row.barrelPercent || "-")}</strong><br><span>HardHit% ${escapeHtml(row.hardHitPercent || "-")} / FB Velo ${escapeHtml(row.fbVelo || "-")}</span>`;
           return `
         <tr>
           <td><div class="player-cell">${row.photoUrl ? `<img class="player-photo" src="${escapeHtml(row.photoUrl)}" alt="${escapeHtml(row.name)} 照片" loading="lazy">` : ""}<strong>${escapeHtml(row.name)}</strong></div></td>
           <td><span class="role-pill ${roleClass}">${roleLabel}</span></td>
           <td>${escapeHtml(row.sourceLabel)}</td>
           <td>${escapeHtml(row.level || row.team || "")}</td>
-          <td><strong>PA ${escapeHtml(row.pa || "-")}</strong><br><span>Pitches ${escapeHtml(row.pitches || "-")}</span></td>
-          <td><strong>AVG ${escapeHtml(row.avg || "-")}</strong><br><span>wOBA ${escapeHtml(row.woba || "-")} / xwOBA ${escapeHtml(row.xwoba || "-")}</span></td>
-          <td><strong>K% ${escapeHtml(row.kPercent || "-")}</strong><br><span>BB% ${escapeHtml(row.bbPercent || "-")} / Whiff% ${escapeHtml(row.whiffPercent || "-")}</span></td>
-          <td><strong>Barrel% ${escapeHtml(row.barrelPercent || "-")}</strong><br><span>HardHit% ${escapeHtml(row.hardHitPercent || "-")} / FB Velo ${escapeHtml(row.fbVelo || "-")}</span></td>
+          <td>${tjCount}</td>
+          <td>${tjQuality}</td>
+          <td>${tjDiscipline}</td>
+          <td>${tjContact}</td>
           <td><button type="button" data-data-index="${originalIndex}">套用</button></td>
         </tr>
       `;
@@ -2059,6 +2078,7 @@
       const source = els.dataSource.value;
       const team = els.dataTeam.value;
       const params = new URLSearchParams();
+      updateDataTableHeader();
       if (source === "tjstats") {
         params.set("q", els.dataSearch.value.trim());
       } else if (source === "savant") {
