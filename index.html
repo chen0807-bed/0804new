@@ -1910,6 +1910,7 @@
     }
 
     function dynamicApiUrl(source, params) {
+      params.set("_t", String(Date.now()));
       const base = els.dataApiBase.value.trim().replace(/\/+$/, "");
       if (base) {
         localStorage.setItem("mlbTradeApiBase", base);
