@@ -1330,6 +1330,7 @@
     const SUPABASE_KEY = "sb_publishable_g2OyioH0WCZ0MOQ11TCwdQ_VpP8jaHx";
     const SUPABASE_SESSION_KEY = "mlbTradeSupabaseSession";
     const PUBLIC_SITE_URL = "https://chen0807-bed.github.io/0804new/";
+    const DEFAULT_API_BASE = "https://mlb-data-proxy.simon950807.workers.dev";
 
     const positions = {
       hitter: [
@@ -1909,9 +1910,24 @@
       return "rookie";
     }
 
+    function normalizedApiBase() {
+      let base = els.dataApiBase.value.trim().replace(/\/+$/, "");
+      if (!base) return DEFAULT_API_BASE;
+      if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
+      try {
+        const parsed = new URL(base);
+        if (!parsed.hostname.endsWith("workers.dev") && !parsed.hostname.includes("localhost")) {
+          return DEFAULT_API_BASE;
+        }
+        return parsed.origin;
+      } catch {
+        return DEFAULT_API_BASE;
+      }
+    }
+
     function dynamicApiUrl(source, params) {
       params.set("_t", String(Date.now()));
-      const base = els.dataApiBase.value.trim().replace(/\/+$/, "");
+      const base = normalizedApiBase();
       if (base) {
         localStorage.setItem("mlbTradeApiBase", base);
         return `${base}/api/${source}?${params.toString()}`;
@@ -1921,7 +1937,7 @@
     }
 
     function hasExternalApiBase() {
-      return Boolean(els.dataApiBase.value.trim());
+      return Boolean(normalizedApiBase());
     }
 
     function canUseSameOriginApi() {
@@ -2095,8 +2111,9 @@
 
       els.dataStatus.textContent = "正在載入資料...";
       els.loadDataBtn.disabled = true;
+      const requestUrl = dynamicApiUrl(source, params);
       try {
-        const response = await fetch(dynamicApiUrl(source, params));
+        const response = await fetch(requestUrl);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "資料載入失敗");
         state.dynamicRows = payload.rows || [];
@@ -2105,7 +2122,7 @@
       } catch (error) {
         state.dynamicRows = [];
         els.dataRows.innerHTML = '<tr><td colspan="10">資料載入失敗</td></tr>';
-        els.dataStatus.textContent = `資料載入失敗：${error.message}`;
+        els.dataStatus.textContent = `資料載入失敗：${error.message}；API：${requestUrl}`;
       } finally {
         els.loadDataBtn.disabled = false;
       }
