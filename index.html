@@ -2078,14 +2078,17 @@
       const source = els.dataSource.value;
       const team = els.dataTeam.value;
       const params = new URLSearchParams();
+      const searchTerm = els.dataSearch.value.trim();
       updateDataTableHeader();
       if (source === "tjstats") {
-        params.set("q", els.dataSearch.value.trim());
+        params.set("q", searchTerm);
       } else if (source === "savant") {
+        if (searchTerm) params.set("q", searchTerm);
         params.set("start", els.dataStartDate.value);
         params.set("end", els.dataEndDate.value);
         if (team) params.set("team", team);
       } else {
+        if (searchTerm) params.set("q", searchTerm);
         if (team) params.set("teamId", String(mlbTeamIds[team] || ""));
         params.set("dateRange", "season");
       }
@@ -2704,7 +2707,7 @@
     els.dataEndDate.addEventListener("change", () => scheduleDynamicLoad(100));
     els.dataSearch.addEventListener("input", () => {
       renderDataRows();
-      if (els.dataSource.value === "tjstats") scheduleDynamicLoad(650);
+      scheduleDynamicLoad(650);
     });
     els.dataApiBase.addEventListener("change", () => {
       const base = els.dataApiBase.value.trim();
