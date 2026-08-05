@@ -1958,6 +1958,21 @@
     function updateDataTableHeader() {
       const header = document.querySelector(".data-table thead tr");
       if (!header) return;
+      if (els.dataSource?.value === "tjstats") {
+        header.innerHTML = `
+        <th>球員</th>
+        <th>角色</th>
+        <th>來源</th>
+        <th>層級</th>
+        <th>PA / Pitches</th>
+        <th>AVG / wOBA / xwOBA</th>
+        <th>K% / BB% / Whiff%</th>
+        <th>Barrel% / HardHit% / FB Velo</th>
+        <th>操作</th>
+      `;
+        return;
+      }
+
       header.innerHTML = `
         <th>球員</th>
         <th>角色</th>
@@ -1975,6 +1990,13 @@
     }
 
     function dataPrimaryStats(row) {
+      if (row?.source === "tjstats") {
+        return {
+          main: `PA ${row.pa || "-"} / AVG ${row.avg || "-"} / wOBA ${row.woba || "-"} / xwOBA ${row.xwoba || "-"}`,
+          sub: `K% ${row.kPercent || "-"} / BB% ${row.bbPercent || "-"} / Whiff% ${row.whiffPercent || "-"} / Barrel% ${row.barrelPercent || row.hardHitPercent || "-"} / FB Velo ${row.fbVelo || "-"}`
+        };
+      }
+
       if (row?.type === "pitcher") {
         return {
           main: `IP ${row.ip || "-"} / ERA ${row.era || "-"} / FIP ${row.fip || "-"}`,
@@ -2002,6 +2024,22 @@
         const stats = dataPrimaryStats(row);
         const roleLabel = dataRoleLabel(row);
         const roleClass = row.type === "pitcher" ? "pitcher" : "hitter";
+        if (els.dataSource.value === "tjstats") {
+          return `
+        <tr>
+          <td><div class="player-cell">${row.photoUrl ? `<img class="player-photo" src="${escapeHtml(row.photoUrl)}" alt="${escapeHtml(row.name)} 照片" loading="lazy">` : ""}<strong>${escapeHtml(row.name)}</strong></div></td>
+          <td><span class="role-pill ${roleClass}">${roleLabel}</span></td>
+          <td>${escapeHtml(row.sourceLabel)}</td>
+          <td>${escapeHtml(row.level || row.team || "")}</td>
+          <td><strong>PA ${escapeHtml(row.pa || "-")}</strong><br><span>Pitches ${escapeHtml(row.pitches || "-")}</span></td>
+          <td><strong>AVG ${escapeHtml(row.avg || "-")}</strong><br><span>wOBA ${escapeHtml(row.woba || "-")} / xwOBA ${escapeHtml(row.xwoba || "-")}</span></td>
+          <td><strong>K% ${escapeHtml(row.kPercent || "-")}</strong><br><span>BB% ${escapeHtml(row.bbPercent || "-")} / Whiff% ${escapeHtml(row.whiffPercent || "-")}</span></td>
+          <td><strong>Barrel% ${escapeHtml(row.barrelPercent || "-")}</strong><br><span>HardHit% ${escapeHtml(row.hardHitPercent || "-")} / FB Velo ${escapeHtml(row.fbVelo || "-")}</span></td>
+          <td><button type="button" data-data-index="${originalIndex}">套用</button></td>
+        </tr>
+      `;
+        }
+
         return `
         <tr>
           <td><div class="player-cell">${row.photoUrl ? `<img class="player-photo" src="${escapeHtml(row.photoUrl)}" alt="${escapeHtml(row.name)} 照片" loading="lazy">` : ""}<strong>${escapeHtml(row.name)}</strong></div></td>
@@ -2637,7 +2675,10 @@
     els.teamASelect.addEventListener("change", () => syncTeamName(els.teamASelect, els.teamAName));
     els.teamBSelect.addEventListener("change", () => syncTeamName(els.teamBSelect, els.teamBName));
     els.loadDataBtn.addEventListener("click", loadDynamicData);
-    els.dataSource.addEventListener("change", () => scheduleDynamicLoad(100));
+    els.dataSource.addEventListener("change", () => {
+      updateDataTableHeader();
+      scheduleDynamicLoad(100);
+    });
     els.dataTeam.addEventListener("change", () => scheduleDynamicLoad(100));
     els.dataStartDate.addEventListener("change", () => scheduleDynamicLoad(100));
     els.dataEndDate.addEventListener("change", () => scheduleDynamicLoad(100));
