@@ -2106,7 +2106,7 @@
       } else {
         if (searchTerm) params.set("q", searchTerm);
         if (team) params.set("teamId", String(mlbTeamIds[team] || ""));
-        params.set("dateRange", "season");
+        if (!searchTerm) params.set("dateRange", "season");
       }
 
       els.dataStatus.textContent = "正在載入資料...";
