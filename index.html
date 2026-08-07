@@ -1022,62 +1022,36 @@
               <input id="calcPa" type="number" min="0" max="800" step="1" value="600">
             </label>
             <label>
-              球員 wOBA
+              安打 H
+              <input id="calcHits" type="number" min="0" max="260" step="1" value="150">
+            </label>
+            <label>
+              全壘打 HR
+              <input id="calcHr" type="number" min="0" max="80" step="1" value="20">
+            </label>
+            <label>
+              打點 RBI
+              <input id="calcRbi" type="number" min="0" max="180" step="1" value="80">
+            </label>
+            <label>
+              盜壘 SB
+              <input id="calcSb" type="number" min="0" max="100" step="1" value="12">
+            </label>
+            <label>
+              失誤 E
+              <input id="calcErrors" type="number" min="0" max="60" step="1" value="8">
+            </label>
+            <label>
+              wOBA
               <input id="calcWoba" type="number" min="0" max="0.700" step="0.001" value="0.365">
             </label>
             <label>
-              聯盟平均 wOBA
-              <input id="calcLeagueWoba" type="number" min="0.250" max="0.430" step="0.001" value="0.320">
+              wSB
+              <input id="calcWsb" type="number" min="-20" max="30" step="0.1" value="1.5">
             </label>
             <label>
-              wOBA Scale
-              <input id="calcWobaScale" type="number" min="0.900" max="1.400" step="0.001" value="1.150">
-            </label>
-            <label>
-              聯盟 R/PA
-              <input id="calcLeagueRunsPerPa" type="number" min="0.080" max="0.150" step="0.001" value="0.115">
-            </label>
-            <label>
-              球場係數 PF
-              <input id="calcParkFactor" type="number" min="80" max="125" step="1" value="100">
-            </label>
-            <label>
-              聯盟非投手 wRC/PA
-              <input id="calcLeagueWrcPerPa" type="number" min="0.080" max="0.150" step="0.001" value="0.115">
-            </label>
-            <label>
-              跑壘 BsR
-              <input id="calcBaserunning" type="number" min="-25" max="25" step="0.1" value="1.5">
-            </label>
-            <label>
-              守備分 UZR / Catcher Runs
-              <input id="calcFieldingRuns" type="number" min="-40" max="40" step="0.1" value="3">
-            </label>
-            <label>
-              位置調整 / 1350 局
-              <select id="calcPositionAdj">
-                <option value="12.5">捕手 C +12.5</option>
-                <option value="-12.5">一壘手 1B -12.5</option>
-                <option value="3.0">二壘手 2B +3.0</option>
-                <option value="2.5">三壘手 3B +2.5</option>
-                <option value="7.5">游擊手 SS +7.5</option>
-                <option value="-7.5">左外野 LF -7.5</option>
-                <option value="2.5">中外野 CF +2.5</option>
-                <option value="-7.5">右外野 RF -7.5</option>
-                <option value="-17.5">指定打擊 DH -17.5</option>
-              </select>
-            </label>
-            <label>
-              守備局數
-              <input id="calcFieldInnings" type="number" min="0" max="1500" step="1" value="1200">
-            </label>
-            <label>
-              替代水準 / 600 PA
-              <input id="calcReplacementPer600" type="number" min="12" max="28" step="0.1" value="20">
-            </label>
-            <label>
-              每 1 WAR 得分
-              <input id="calcRunsPerWar" type="number" min="7" max="12" step="0.1" value="10">
+              wRC+
+              <input id="calcWrcPlus" type="number" min="0" max="250" step="1" value="120">
             </label>
           </div>
 
@@ -1107,51 +1081,16 @@
               <input id="calcStrikeouts" type="number" min="0" max="350" step="1" value="190">
             </label>
             <label>
-              內野飛球 IFFB
-              <input id="calcIffb" type="number" min="0" max="60" step="1" value="14">
+              ERA
+              <input id="calcEra" type="number" min="0" max="12" step="0.01" value="3.80">
             </label>
             <label>
-              投手角色
-              <select id="calcPitcherRole">
-                <option value="starter">先發投手</option>
-                <option value="reliever">救援投手</option>
-              </select>
-            </label>
-            <label>
-              ifFIP Constant
-              <input id="calcIfFipConstant" type="number" min="2" max="5" step="0.01" value="3.10">
-            </label>
-            <label>
-              聯盟 FIPR9
-              <input id="calcLeagueFipR9" type="number" min="2" max="7" step="0.01" value="4.45">
-            </label>
-            <label>
-              聯盟 RA9
-              <input id="calcLeagueRa9" type="number" min="2" max="7" step="0.01" value="4.55">
-            </label>
-            <label>
-              聯盟 ERA
-              <input id="calcLeagueEra" type="number" min="2" max="7" step="0.01" value="4.20">
-            </label>
-            <label>
-              FIP 球場係數
-              <input id="calcPitchParkFactor" type="number" min="80" max="125" step="1" value="100">
-            </label>
-            <label>
-              救援槓桿
-              <input id="calcLeverage" type="number" min="0.80" max="2.50" step="0.01" value="1.00">
-            </label>
-            <label>
-              WAR/IP 校正
-              <input id="calcWarIpCorrection" type="number" min="-0.003" max="0.001" step="0.0001" value="-0.0008">
-            </label>
-            <label>
-              替代水準 / 9 IP
-              <input id="calcPitchReplacement" type="number" min="0.20" max="0.60" step="0.01" value="0.38">
+              FIP
+              <input id="calcFip" type="number" min="0" max="12" step="0.01" value="3.70">
             </label>
           </div>
 
-          <p class="hint">FanGraphs 風格：野手以 wRAA、BsR、UZR/捕手守備、位置、聯盟、替代水準估算；投手以 ifFIP、FIPR9、球場、動態 RPW、替代水準估算。</p>
+          <p class="hint">小聯盟粗略 WAR：打者以 PA、wOBA、wRC+、wSB、長打與守備失誤估算；投手以 IP、ERA、FIP、K、BB、HBP、HR 與出賽型態估算。</p>
         </div>
 
         <div class="calc-result" id="warCalcResultCard">
@@ -1472,34 +1411,22 @@
       hitterWarCalc: document.getElementById("hitterWarCalc"),
       pitcherWarCalc: document.getElementById("pitcherWarCalc"),
       calcPa: document.getElementById("calcPa"),
+      calcHits: document.getElementById("calcHits"),
+      calcHr: document.getElementById("calcHr"),
+      calcRbi: document.getElementById("calcRbi"),
+      calcSb: document.getElementById("calcSb"),
+      calcErrors: document.getElementById("calcErrors"),
       calcWoba: document.getElementById("calcWoba"),
-      calcLeagueWoba: document.getElementById("calcLeagueWoba"),
-      calcWobaScale: document.getElementById("calcWobaScale"),
-      calcLeagueRunsPerPa: document.getElementById("calcLeagueRunsPerPa"),
-      calcParkFactor: document.getElementById("calcParkFactor"),
-      calcLeagueWrcPerPa: document.getElementById("calcLeagueWrcPerPa"),
-      calcBaserunning: document.getElementById("calcBaserunning"),
-      calcFieldingRuns: document.getElementById("calcFieldingRuns"),
-      calcPositionAdj: document.getElementById("calcPositionAdj"),
-      calcFieldInnings: document.getElementById("calcFieldInnings"),
-      calcReplacementPer600: document.getElementById("calcReplacementPer600"),
-      calcRunsPerWar: document.getElementById("calcRunsPerWar"),
+      calcWsb: document.getElementById("calcWsb"),
+      calcWrcPlus: document.getElementById("calcWrcPlus"),
       calcIp: document.getElementById("calcIp"),
       calcGames: document.getElementById("calcGames"),
       calcPitchHr: document.getElementById("calcPitchHr"),
       calcPitchWalks: document.getElementById("calcPitchWalks"),
       calcPitchHbp: document.getElementById("calcPitchHbp"),
       calcStrikeouts: document.getElementById("calcStrikeouts"),
-      calcIffb: document.getElementById("calcIffb"),
-      calcPitcherRole: document.getElementById("calcPitcherRole"),
-      calcIfFipConstant: document.getElementById("calcIfFipConstant"),
-      calcLeagueFipR9: document.getElementById("calcLeagueFipR9"),
-      calcLeagueRa9: document.getElementById("calcLeagueRa9"),
-      calcLeagueEra: document.getElementById("calcLeagueEra"),
-      calcPitchParkFactor: document.getElementById("calcPitchParkFactor"),
-      calcLeverage: document.getElementById("calcLeverage"),
-      calcWarIpCorrection: document.getElementById("calcWarIpCorrection"),
-      calcPitchReplacement: document.getElementById("calcPitchReplacement"),
+      calcEra: document.getElementById("calcEra"),
+      calcFip: document.getElementById("calcFip"),
       warCalcLabel: document.getElementById("warCalcLabel"),
       warCalcValue: document.getElementById("warCalcValue"),
       warCalcRuns: document.getElementById("warCalcRuns"),
@@ -1630,29 +1557,26 @@
 
       if (state.warCalcRole === "hitter") {
         const pa = Number(els.calcPa.value) || 0;
+        const hits = Number(els.calcHits.value) || 0;
+        const homers = Number(els.calcHr.value) || 0;
+        const rbi = Number(els.calcRbi.value) || 0;
+        const steals = Number(els.calcSb.value) || 0;
+        const errors = Number(els.calcErrors.value) || 0;
         const woba = Number(els.calcWoba.value) || 0;
-        const leagueWoba = Number(els.calcLeagueWoba.value) || 0.320;
-        const wobaScale = Number(els.calcWobaScale.value) || 1.15;
-        const leagueRunsPerPa = Number(els.calcLeagueRunsPerPa.value) || 0.115;
-        const parkFactor = (Number(els.calcParkFactor.value) || 100) / 100;
-        const leagueWrcPerPa = Number(els.calcLeagueWrcPerPa.value) || leagueRunsPerPa;
-        const baserunningRuns = Number(els.calcBaserunning.value) || 0;
-        const fieldingRuns = Number(els.calcFieldingRuns.value) || 0;
-        const positionFullSeason = Number(els.calcPositionAdj.value) || 0;
-        const fieldInnings = Number(els.calcFieldInnings.value) || 0;
-        const replacementPer600 = Number(els.calcReplacementPer600.value) || 20;
-        runsPerWar = Number(els.calcRunsPerWar.value) || 10;
+        const wsb = Number(els.calcWsb.value) || 0;
+        const wrcPlus = Number(els.calcWrcPlus.value) || 0;
+        runsPerWar = 10;
 
-        const wraa = ((woba - leagueWoba) / wobaScale) * pa;
-        const parkAdjustment = (leagueRunsPerPa - (parkFactor * leagueRunsPerPa)) * pa;
-        const leagueAdjustment = (leagueRunsPerPa - leagueWrcPerPa) * pa;
-        const battingRuns = wraa + parkAdjustment + leagueAdjustment;
-        const positionRuns = positionFullSeason * clamp(fieldInnings / 1350, 0, 1.15);
-        replacement = (replacementPer600 / 600) * pa;
-        runs = battingRuns + baserunningRuns + fieldingRuns + positionRuns + replacement;
+        const wobaRuns = ((woba - 0.320) / 1.15) * pa;
+        const wrcRuns = ((wrcPlus - 100) / 100) * 0.115 * pa;
+        const countingRuns = (homers * 0.7) + (rbi * 0.08) + (hits * 0.03) + (steals * 0.2);
+        const fieldingRuns = errors * -0.35;
+        const battingRuns = (wobaRuns * 0.55) + (wrcRuns * 0.45) + (countingRuns * 0.18);
+        replacement = (20 / 600) * pa;
+        runs = battingRuns + wsb + fieldingRuns + replacement;
         war = runs / runsPerWar;
-        els.warCalcLabel.textContent = "FanGraphs 風格野手 WAR";
-        els.warCalcNote.textContent = `wRAA ${wraa.toFixed(1)}，Batting ${battingRuns.toFixed(1)}，BsR ${baserunningRuns.toFixed(1)}，Fielding ${fieldingRuns.toFixed(1)}。`;
+        els.warCalcLabel.textContent = "小聯盟粗略打者 WAR";
+        els.warCalcNote.textContent = `進攻 ${battingRuns.toFixed(1)}，wSB ${wsb.toFixed(1)}，失誤修正 ${fieldingRuns.toFixed(1)}，替代水準 ${replacement.toFixed(1)}。`;
       } else {
         const ip = Number(els.calcIp.value) || 0;
         const games = Number(els.calcGames.value) || 1;
@@ -1660,32 +1584,27 @@
         const walks = Number(els.calcPitchWalks.value) || 0;
         const hbp = Number(els.calcPitchHbp.value) || 0;
         const strikeouts = Number(els.calcStrikeouts.value) || 0;
-        const iffb = Number(els.calcIffb.value) || 0;
-        const role = els.calcPitcherRole.value;
-        const ifFipConstant = Number(els.calcIfFipConstant.value) || 3.10;
-        const leagueFipR9 = Number(els.calcLeagueFipR9.value) || 4.45;
-        const leagueRa9 = Number(els.calcLeagueRa9.value) || 4.55;
-        const leagueEra = Number(els.calcLeagueEra.value) || 4.20;
-        const pitchParkFactor = (Number(els.calcPitchParkFactor.value) || 100) / 100;
-        const leverage = Number(els.calcLeverage.value) || 1;
-        const warIpCorrection = Number(els.calcWarIpCorrection.value) || 0;
-        const replacementLevel = Number(els.calcPitchReplacement.value) || 0.38;
+        const era = Number(els.calcEra.value) || 0;
+        const fipInput = Number(els.calcFip.value) || 0;
+        runsPerWar = 10;
 
-        const ifFip = ip > 0 ? (((13 * homers) + (3 * (walks + hbp)) - (2 * (strikeouts + iffb))) / ip) + ifFipConstant : 0;
-        const fipR9 = ifFip + (leagueRa9 - leagueEra);
-        const parkAdjustedFipR9 = fipR9 / pitchParkFactor;
-        const runsAboveAveragePer9 = leagueFipR9 - parkAdjustedFipR9;
+        const estimatedFip = ip > 0 ? (((13 * homers) + (3 * (walks + hbp)) - (2 * strikeouts)) / ip) + 3.10 : 4.30;
+        const fip = fipInput || estimatedFip;
         const ipPerGame = ip / Math.max(games, 1);
-        runsPerWar = ((((18 - ipPerGame) * leagueFipR9) + (ipPerGame * parkAdjustedFipR9)) / 18 + 2) * 1.5;
-        const averageWins = runsAboveAveragePer9 / runsPerWar;
-        replacement = replacementLevel;
-        let pitcherWar = (averageWins + replacementLevel) * (ip / 9);
-        if (role === "reliever") pitcherWar *= leverage;
-        const correction = warIpCorrection * ip;
-        war = pitcherWar + correction;
-        runs = war * runsPerWar;
-        els.warCalcLabel.textContent = "FanGraphs 風格投手 WAR";
-        els.warCalcNote.textContent = `ifFIP ${ifFip.toFixed(2)}，pFIPR9 ${parkAdjustedFipR9.toFixed(2)}，RAAP9 ${runsAboveAveragePer9.toFixed(2)}。`;
+        const leagueEra = 4.50;
+        const leagueFip = 4.30;
+        const eraRuns = era > 0 ? (leagueEra - era) * (ip / 9) : 0;
+        const fipRuns = (leagueFip - fip) * (ip / 9);
+        const kPer9 = ip > 0 ? (strikeouts / ip) * 9 : 0;
+        const bbPer9 = ip > 0 ? ((walks + hbp) / ip) * 9 : 0;
+        const hrPer9 = ip > 0 ? (homers / ip) * 9 : 0;
+        const skillRuns = ((kPer9 - 8.5) * 0.25 - (bbPer9 - 3.2) * 0.35 - (hrPer9 - 1.1) * 0.8) * (ip / 50);
+        const roleReplacementPer9 = ipPerGame >= 3 ? 1.05 : 0.72;
+        replacement = roleReplacementPer9 * (ip / 9);
+        runs = (fipRuns * 0.55) + (eraRuns * 0.30) + skillRuns + replacement;
+        war = runs / runsPerWar;
+        els.warCalcLabel.textContent = "小聯盟粗略投手 WAR";
+        els.warCalcNote.textContent = `ERA Runs ${eraRuns.toFixed(1)}，FIP Runs ${fipRuns.toFixed(1)}，K/9 ${kPer9.toFixed(1)}，BB/9 ${bbPer9.toFixed(1)}，HR/9 ${hrPer9.toFixed(1)}。`;
       }
 
       const roundedWar = clamp(war, -5, 12);
@@ -1698,34 +1617,22 @@
 
     function resetWarCalculator() {
       els.calcPa.value = 600;
+      els.calcHits.value = 150;
+      els.calcHr.value = 20;
+      els.calcRbi.value = 80;
+      els.calcSb.value = 12;
+      els.calcErrors.value = 8;
       els.calcWoba.value = 0.365;
-      els.calcLeagueWoba.value = 0.320;
-      els.calcWobaScale.value = 1.150;
-      els.calcLeagueRunsPerPa.value = 0.115;
-      els.calcParkFactor.value = 100;
-      els.calcLeagueWrcPerPa.value = 0.115;
-      els.calcBaserunning.value = 1.5;
-      els.calcFieldingRuns.value = 3;
-      els.calcPositionAdj.value = 12.5;
-      els.calcFieldInnings.value = 1200;
-      els.calcReplacementPer600.value = 20;
-      els.calcRunsPerWar.value = 10;
+      els.calcWsb.value = 1.5;
+      els.calcWrcPlus.value = 120;
       els.calcIp.value = 180;
       els.calcGames.value = 30;
       els.calcPitchHr.value = 22;
       els.calcPitchWalks.value = 55;
       els.calcPitchHbp.value = 6;
       els.calcStrikeouts.value = 190;
-      els.calcIffb.value = 14;
-      els.calcPitcherRole.value = "starter";
-      els.calcIfFipConstant.value = 3.10;
-      els.calcLeagueFipR9.value = 4.45;
-      els.calcLeagueRa9.value = 4.55;
-      els.calcLeagueEra.value = 4.20;
-      els.calcPitchParkFactor.value = 100;
-      els.calcLeverage.value = 1.00;
-      els.calcWarIpCorrection.value = -0.0008;
-      els.calcPitchReplacement.value = 0.38;
+      els.calcEra.value = 3.80;
+      els.calcFip.value = 3.70;
       calculateWar();
     }
 
